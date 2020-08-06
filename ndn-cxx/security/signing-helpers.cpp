@@ -66,5 +66,11 @@ signingWithSha256()
   return SigningInfo(SigningInfo::SIGNER_TYPE_SHA256);
 }
 
+SigningInfo
+signingWithBlake2s()
+{
+  return SigningInfo(SigningInfo::SIGNER_TYPE_BLAKE2S);
+}
+
 } // namespace security
 } // namespace ndn

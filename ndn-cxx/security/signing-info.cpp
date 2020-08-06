@@ -52,6 +52,13 @@ SigningInfo::getDigestSha256Identity()
 }
 
 const Name&
+SigningInfo::getDigestBlake2sIdentity()
+{
+  static Name digestBlake2sIdentity("/localhost/identity/digest-blake3");
+  return digestBlake2sIdentity;
+}
+
+const Name&
 SigningInfo::getHmacIdentity()
 {
   static Name hmacIdentity("/localhost/identity/hmac");
@@ -66,7 +73,7 @@ SigningInfo::SigningInfo(SignerType signerType,
   , m_digestAlgorithm(DigestAlgorithm::SHA256)
   , m_info(signatureInfo)
 {
-  BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_HMAC);
+  BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_BLAKE2S);
 }
 
 SigningInfo::SigningInfo(const Identity& identity)
@@ -213,6 +220,8 @@ operator<<(std::ostream& os, const SigningInfo& si)
       return os << "id:" << SigningInfo::getDigestSha256Identity();
     case SigningInfo::SIGNER_TYPE_HMAC:
       return os << "id:" << si.getSignerName();
+    case SigningInfo::SIGNER_TYPE_BLAKE2S:
+      return os << "id:" << SigningInfo::getDigestBlake2sIdentity();
   }
   NDN_THROW(std::invalid_argument("Unknown signer type"));
   return os;

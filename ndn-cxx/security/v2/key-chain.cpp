@@ -668,6 +668,11 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
       return std::make_tuple(keyName, sigInfo);
     }
+    case SigningInfo::SIGNER_TYPE_BLAKE2S: {
+      sigInfo.setSignatureType(tlv::DigestBlake2s);
+      NDN_LOG_TRACE("Prepared signature info: "<< sigInfo);
+      return std::make_tuple(SigningInfo::getDigestBlake2sIdentity(), sigInfo);
+    }
     default: {
       NDN_THROW(InvalidSigningInfoError("Unrecognized signer type " +
                                         boost::lexical_cast<std::string>(params.getSignerType())));

@@ -131,6 +131,7 @@ enum SignatureTypeValue : uint16_t {
   SignatureSha256WithRsa   = 1,
   SignatureSha256WithEcdsa = 3,
   SignatureHmacWithSha256  = 4,
+  DigestBlake2s            = 6,
 };
 
 std::ostream&

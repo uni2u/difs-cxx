@@ -83,6 +83,8 @@ operator<<(std::ostream& os, DigestAlgorithm algorithm)
       return os << "SHA3-384";
     case DigestAlgorithm::SHA3_512:
       return os << "SHA3-512";
+    case DigestAlgorithm::BLAKE3:
+      return os << "BLAKE3";
   }
   return os << to_underlying(algorithm);
 }

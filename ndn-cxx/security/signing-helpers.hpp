@@ -70,12 +70,19 @@ signingByCertificate(const v2::Certificate& cert);
 SigningInfo
 signingWithSha256();
 
+/**
+ * \return a SigningInfo for signing with Blake3
+ */
+SigningInfo
+signingWithBlake2s();
+
 } // namespace security
 
 using security::signingByIdentity;
 using security::signingByKey;
 using security::signingByCertificate;
 using security::signingWithSha256;
+using security::signingWithBlake2s;
 
 } // namespace ndn
 

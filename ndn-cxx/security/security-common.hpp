@@ -105,6 +105,7 @@ enum class DigestAlgorithm {
   SHA3_256,
   SHA3_384,
   SHA3_512,
+  BLAKE3,
 };
 
 std::ostream&
