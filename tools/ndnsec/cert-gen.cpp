@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -22,6 +22,7 @@
 #include "ndnsec.hpp"
 #include "util.hpp"
 
+#include "ndn-cxx/security/additional-description.hpp"
 #include "ndn-cxx/security/transform/base64-encode.hpp"
 #include "ndn-cxx/security/transform/buffer-source.hpp"
 #include "ndn-cxx/security/transform/public-key.hpp"
@@ -151,7 +152,7 @@ ndnsec_cert_gen(int argc, char** argv)
   SignatureInfo signatureInfo;
   signatureInfo.setValidityPeriod(security::ValidityPeriod(notBefore, notAfter));
   if (!additionalDescription.empty()) {
-    signatureInfo.appendTypeSpecificTlv(additionalDescription.wireEncode());
+    signatureInfo.addCustomTlv(additionalDescription.wireEncode());
   }
 
   security::Identity identity;

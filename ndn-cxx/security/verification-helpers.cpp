@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -22,11 +22,11 @@
 #include "ndn-cxx/security/verification-helpers.hpp"
 
 #include "ndn-cxx/data.hpp"
-#include "ndn-cxx/interest.hpp"
 #include "ndn-cxx/encoding/buffer-stream.hpp"
+#include "ndn-cxx/interest.hpp"
+#include "ndn-cxx/security/certificate.hpp"
 #include "ndn-cxx/security/impl/openssl.hpp"
 #include "ndn-cxx/security/pib/key.hpp"
-#include "ndn-cxx/security/tpm/key-handle.hpp"
 #include "ndn-cxx/security/tpm/tpm.hpp"
 #include "ndn-cxx/security/transform/bool-sink.hpp"
 #include "ndn-cxx/security/transform/buffer-source.hpp"
@@ -34,18 +34,26 @@
 #include "ndn-cxx/security/transform/public-key.hpp"
 #include "ndn-cxx/security/transform/stream-sink.hpp"
 #include "ndn-cxx/security/transform/verifier-filter.hpp"
-#include "ndn-cxx/security/v2/certificate.hpp"
 
 namespace ndn {
 namespace security {
 
 namespace {
 
-struct ParseResult
+class ParseResult
 {
-  bool isParsable = false;
-  const uint8_t* buf = nullptr;
-  size_t bufLen = 0;
+public:
+  ParseResult() = default;
+
+  ParseResult(InputBuffers bufs, const uint8_t* sig, size_t sigLen)
+    : bufs(std::move(bufs))
+    , sig(sig)
+    , sigLen(sigLen)
+  {
+  }
+
+public:
+  InputBuffers bufs;
   const uint8_t* sig = nullptr;
   size_t sigLen = 0;
 };
@@ -53,23 +61,31 @@ struct ParseResult
 } // namespace
 
 bool
-verifySignature(const uint8_t* blob, size_t blobLen, const uint8_t* sig, size_t sigLen,
+verifySignature(const InputBuffers& blobs, const uint8_t* sig, size_t sigLen,
                 const transform::PublicKey& key)
 {
   bool result = false;
   try {
     using namespace transform;
-    bufferSource(blob, blobLen) >> verifierFilter(DigestAlgorithm::SHA256, key, sig, sigLen)
-                                >> boolSink(result);
+    bufferSource(blobs) >> verifierFilter(DigestAlgorithm::SHA256, key, sig, sigLen)
+                        >> boolSink(result);
   }
   catch (const transform::Error&) {
     return false;
   }
+
   return result;
 }
 
 bool
-verifySignature(const uint8_t* data, size_t dataLen, const uint8_t* sig, size_t sigLen,
+verifySignature(const uint8_t* blob, size_t blobLen, const uint8_t* sig, size_t sigLen,
+                const transform::PublicKey& key)
+{
+  return verifySignature({{blob, blobLen}}, sig, sigLen, key);
+}
+
+bool
+verifySignature(const InputBuffers& blobs, const uint8_t* sig, size_t sigLen,
                 const uint8_t* key, size_t keyLen)
 {
   transform::PublicKey pKey;
@@ -80,18 +96,24 @@ verifySignature(const uint8_t* data, size_t dataLen, const uint8_t* sig, size_t 
     return false;
   }
 
-  return verifySignature(data, dataLen, sig, sigLen, pKey);
+  return verifySignature(blobs, sig, sigLen, pKey);
+}
+
+bool
+verifySignature(const uint8_t* blob, size_t blobLen, const uint8_t* sig, size_t sigLen,
+                const uint8_t* key, size_t keyLen)
+{
+  return verifySignature({{blob, blobLen}}, sig, sigLen, key, keyLen);
 }
 
 static ParseResult
 parse(const Data& data)
 {
   try {
-    return {true,
-            data.wireEncode().value(),
-            data.wireEncode().value_size() - data.getSignature().getValue().size(),
-            data.getSignature().getValue().value(),
-            data.getSignature().getValue().value_size()};
+    const Block& wire = data.wireEncode();
+    return ParseResult({{wire.value(), wire.value_size() - data.getSignatureValue().size()}},
+                       data.getSignatureValue().value(),
+                       data.getSignatureValue().value_size());
   }
   catch (const tlv::Error&) {
     return ParseResult();
@@ -101,18 +123,30 @@ parse(const Data& data)
 static ParseResult
 parse(const Interest& interest)
 {
-  const Name& interestName = interest.getName();
-
-  if (interestName.size() < signed_interest::MIN_SIZE)
-    return ParseResult();
-
   try {
-    const Block& nameBlock = interestName.wireEncode();
-    return {true,
-            nameBlock.value(),
-            nameBlock.value_size() - interestName[signed_interest::POS_SIG_VALUE].size(),
-            interestName[signed_interest::POS_SIG_VALUE].blockFromValue().value(),
-            interestName[signed_interest::POS_SIG_VALUE].blockFromValue().value_size()};
+    interest.wireEncode();
+
+    if (interest.getSignatureInfo() && interest.getSignatureValue().isValid()) {
+      // Verify using v0.3 Signed Interest semantics
+      Block sigValue = interest.getSignatureValue();
+      return ParseResult(interest.extractSignedRanges(),
+                         sigValue.value(),
+                         sigValue.value_size());
+    }
+    else {
+      // Verify using older Signed Interest semantics
+      const Name& interestName = interest.getName();
+      if (interestName.size() < signed_interest::MIN_SIZE) {
+        return ParseResult();
+      }
+
+      const Block& nameBlock = interestName.wireEncode();
+      Block sigValue = interestName[signed_interest::POS_SIG_VALUE].blockFromValue();
+      return ParseResult({{nameBlock.value(),
+                           nameBlock.value_size() - interestName[signed_interest::POS_SIG_VALUE].size()}},
+                         sigValue.value(),
+                         sigValue.value_size());
+    }
   }
   catch (const tlv::Error&) {
     return ParseResult();
@@ -122,23 +156,20 @@ parse(const Interest& interest)
 static bool
 verifySignature(ParseResult params, const transform::PublicKey& key)
 {
-  return params.isParsable && verifySignature(params.buf, params.bufLen,
-                                              params.sig, params.sigLen, key);
+  return !params.bufs.empty() && verifySignature(params.bufs, params.sig, params.sigLen, key);
 }
 
 static bool
 verifySignature(ParseResult params, const tpm::Tpm& tpm, const Name& keyName,
                 DigestAlgorithm digestAlgorithm)
 {
-  return params.isParsable && bool(tpm.verify(params.buf, params.bufLen,
-                                         params.sig, params.sigLen, keyName, digestAlgorithm));
+  return !params.bufs.empty() && bool(tpm.verify(params.bufs, params.sig, params.sigLen, keyName, digestAlgorithm));
 }
 
 static bool
 verifySignature(ParseResult params, const uint8_t* key, size_t keyLen)
 {
-  return params.isParsable && verifySignature(params.buf, params.bufLen,
-                                              params.sig, params.sigLen, key, keyLen);
+  return !params.bufs.empty() && verifySignature(params.bufs, params.sig, params.sigLen, key, keyLen);
 }
 
 bool
@@ -206,41 +237,49 @@ verifySignature(const Interest& interest, const tpm::Tpm& tpm,
 ///////////////////////////////////////////////////////////////////////
 
 bool
-verifyDigest(const uint8_t* blob, size_t blobLen, const uint8_t* digest, size_t digestLen,
+verifyDigest(const InputBuffers& bufs, const uint8_t* digest, size_t digestLen,
              DigestAlgorithm algorithm)
 {
   using namespace transform;
 
   OBufferStream os;
   try {
-    bufferSource(blob, blobLen) >> digestFilter(algorithm) >> streamSink(os);
+    bufferSource(bufs) >> digestFilter(algorithm) >> streamSink(os);
   }
   catch (const transform::Error&) {
     return false;
   }
   ConstBufferPtr result = os.buf();
 
-  if (result->size() != digestLen)
+  if (result->size() != digestLen) {
     return false;
+  }
 
   // constant-time buffer comparison to mitigate timing attacks
   return CRYPTO_memcmp(result->data(), digest, digestLen) == 0;
 }
 
 bool
+verifyDigest(const uint8_t* blob, size_t blobLen, const uint8_t* digest, size_t digestLen,
+             DigestAlgorithm algorithm)
+{
+  return verifyDigest({{blob, blobLen}}, digest, digestLen, algorithm);
+}
+
+bool
 verifyDigest(const Data& data, DigestAlgorithm algorithm)
 {
   ParseResult parseResult = parse(data);
-  return parseResult.isParsable && verifyDigest(parseResult.buf, parseResult.bufLen,
-                                                parseResult.sig, parseResult.sigLen, algorithm);
+  return !parseResult.bufs.empty() && verifyDigest(parseResult.bufs, parseResult.sig,
+                                                   parseResult.sigLen, algorithm);
 }
 
 bool
 verifyDigest(const Interest& interest, DigestAlgorithm algorithm)
 {
   ParseResult parseResult = parse(interest);
-  return parseResult.isParsable && verifyDigest(parseResult.buf, parseResult.bufLen,
-                                                parseResult.sig, parseResult.sigLen, algorithm);
+  return !parseResult.bufs.empty() && verifyDigest(parseResult.bufs, parseResult.sig,
+                                                   parseResult.sigLen, algorithm);
 }
 
 } // namespace security

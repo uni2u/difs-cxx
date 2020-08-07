@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -23,6 +23,8 @@
 #define NDN_SECURITY_SECURITY_COMMON_HPP
 
 #include "ndn-cxx/detail/common.hpp"
+
+#include <vector>
 
 namespace ndn {
 
@@ -52,6 +54,13 @@ const size_t MIN_SIZE = 4;
 
 } // namespace command_interest
 
+#ifndef DOXYGEN
+using InputBuffers = std::vector<std::pair<const uint8_t*, size_t>>;
+#else
+/// Represents a range of distcontiguous buffers as input to a security operation
+class InputBuffers;
+#endif
+
 /**
  * @brief The type of KeyId component in a key name.
  */
@@ -63,7 +72,7 @@ enum class KeyIdType {
    */
   USER_SPECIFIED = 0,
   /**
-   * @brief Use the SHA256 hash of the public key as key id.
+   * @brief Use the SHA-256 hash of the public key as key id.
    *
    * This KeyIdType guarantees the uniqueness of the key names.
    */

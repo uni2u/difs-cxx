@@ -1,54 +1,48 @@
 #!/usr/bin/env bash
-set -e
+set -ex
 
-JDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-source "$JDIR"/util.sh
+git submodule sync
+git submodule update --init
 
-set -x
-
-sudo rm -f /usr/local/bin/ndnsec*
-sudo rm -fr /usr/local/include/ndn-cxx
-sudo rm -f /usr/local/lib{,64}/libndn-cxx*
-sudo rm -f /usr/local/lib{,64}/pkgconfig/libndn-cxx.pc
-
-if [[ $JOB_NAME == *"code-coverage" ]]; then
-    COVERAGE="--with-coverage"
-elif [[ -z $DISABLE_ASAN ]]; then
+if [[ -z $DISABLE_ASAN ]]; then
     ASAN="--with-sanitizer=address"
 fi
-if [[ -n $USE_OPENSSL_1_1 ]] && has OSX $NODE_LABELS; then
-    OPENSSL="--with-openssl=/usr/local/opt/openssl@1.1"
+if [[ $JOB_NAME == *"code-coverage" ]]; then
+    COVERAGE="--with-coverage"
 fi
-
-# Cleanup
-sudo_preserve_env PATH -- ./waf --color=yes distclean
+if has CentOS-8 $NODE_LABELS; then
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1721553
+    PCH="--without-pch"
+fi
 
 if [[ $JOB_NAME != *"code-coverage" && $JOB_NAME != *"limited-build" ]]; then
-  # Configure/build static library in optimized mode with tests
-  ./waf --color=yes configure --enable-static --disable-shared --with-tests $OPENSSL
-  ./waf --color=yes build -j${WAF_JOBS:-1}
+    # Build static library in release mode with tests and without precompiled headers
+    ./waf --color=yes configure --enable-static --disable-shared --with-tests --without-pch
+    ./waf --color=yes build -j$WAF_JOBS
 
-  # Cleanup
-  sudo_preserve_env PATH -- ./waf --color=yes distclean
+    # Cleanup
+    ./waf --color=yes distclean
 
-  # Configure/build static and shared library in optimized mode without tests
-  ./waf --color=yes configure --enable-static --enable-shared $OPENSSL
-  ./waf --color=yes build -j${WAF_JOBS:-1}
+    # Build static and shared library in release mode without tests
+    ./waf --color=yes configure --enable-static --enable-shared $PCH
+    ./waf --color=yes build -j$WAF_JOBS
 
-  # Cleanup
-  sudo_preserve_env PATH -- ./waf --color=yes distclean
+    # Cleanup
+    ./waf --color=yes distclean
 fi
 
-# Configure/build shared library in debug mode with tests/examples and without precompiled headers
-./waf --color=yes configure --disable-static --enable-shared --debug --with-tests \
-                            --with-examples --without-pch $ASAN $COVERAGE $OPENSSL
-./waf --color=yes build -j${WAF_JOBS:-1}
+# Build shared library in debug mode with tests and examples
+./waf --color=yes configure --disable-static --enable-shared --debug --with-tests --with-examples $ASAN $COVERAGE $PCH
+./waf --color=yes build -j$WAF_JOBS
 
-# (tests will be run against debug version)
+# (tests will be run against the debug version)
 
 # Install
 sudo_preserve_env PATH -- ./waf --color=yes install
 
+if has CentOS-8 $NODE_LABELS; then
+    sudo tee /etc/ld.so.conf.d/ndn.conf >/dev/null <<< /usr/local/lib64
+fi
 if has Linux $NODE_LABELS; then
     sudo ldconfig
 fi

@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2018 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -24,6 +24,7 @@
 // #include "ndn-cxx/security/pib/pib-memory.hpp"
 // #include "ndn-cxx/security/tpm/tpm.hpp"
 // #include "ndn-cxx/security/tpm/back-end-mem.hpp"
+
 // #include <fstream>
 
 namespace ndn {
@@ -54,19 +55,18 @@ namespace tests {
 //         cert.setFreshnessPeriod(1_h);
 //         cert.setContent(tpm.getPublicKey(keyName));
 
-//         // @TODO sign using the new KeyChain
+//         // TODO: sign using KeyChain
 //         SignatureInfo info;
 //         info.setSignatureType(tlv::SignatureSha256WithEcdsa);
 //         info.setKeyLocator(KeyLocator(keyName));
 //         info.setValidityPeriod(ValidityPeriod(time::fromIsoString("20170102T000000"),
 //                                               time::fromIsoString("20180102T000000")));
-//         cert.setSignature(Signature(info, Block()));
+//         cert.setSignatureInfo(info);
 
 //         EncodingBuffer buf;
 //         cert.wireEncode(buf, true);
 
-//         cert.setSignatureValue(Block(tlv::SignatureValue,
-//                                      tpm.sign(buf.buf(), buf.size(), keyName, DigestAlgorithm::SHA256)));
+//         cert.setSignatureValue(tpm.sign(buf.buf(), buf.size(), keyName, DigestAlgorithm::SHA256));
 
 //         printBytes(prefix + "_KEY" + to_string(keyId) + "_CERT" + to_string(certVersion),
 //                    cert.wireEncode());

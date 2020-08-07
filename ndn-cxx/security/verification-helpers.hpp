@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -44,9 +44,16 @@ namespace transform {
 class PublicKey;
 } // namespace transform
 
-namespace v2 {
+inline namespace v2 {
 class Certificate;
-} // namespace v2
+} // inline namespace v2
+
+/**
+ * @brief Verify @p blobs using @p key against @p sig.
+ */
+bool
+verifySignature(const InputBuffers& blobs, const uint8_t* sig, size_t sigLen,
+                const transform::PublicKey& key);
 
 /**
  * @brief Verify @p blob using @p key against @p sig.
@@ -54,6 +61,14 @@ class Certificate;
 bool
 verifySignature(const uint8_t* blob, size_t blobLen, const uint8_t* sig, size_t sigLen,
                 const transform::PublicKey& key);
+
+/**
+ * @brief Verify @p blobs using @p key against @p sig.
+ * @note @p key must be a public key in PKCS #8 format.
+ */
+bool
+verifySignature(const InputBuffers& blobs, const uint8_t* sig, size_t sigLen,
+                const uint8_t* key, size_t keyLen);
 
 /**
  * @brief Verify @p blob using @p key against @p sig.
@@ -138,6 +153,13 @@ verifySignature(const Interest& interest, const tpm::Tpm& tpm, const Name& keyNa
                 DigestAlgorithm digestAlgorithm);
 
 //////////////////////////////////////////////////////////////////
+
+/**
+ * @brief Verify @p blobs against @p digest using @p algorithm.
+ */
+bool
+verifyDigest(const InputBuffers& blobs, const uint8_t* digest, size_t digestLen,
+             DigestAlgorithm algorithm);
 
 /**
  * @brief Verify @p blob against @p digest using @p algorithm.

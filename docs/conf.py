@@ -12,7 +12,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
+# import os
 import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
@@ -20,13 +20,13 @@ import sys
 # -- Project information -----------------------------------------------------
 
 project = u'ndn-cxx: NDN C++ library with eXperimental eXtensions'
-copyright = u'Copyright © 2013-2019 Regents of the University of California.'
+copyright = u'Copyright © 2013-2020 Regents of the University of California.'
 author = u'Named Data Networking Project'
 
-# The short X.Y version
+# The short X.Y version.
 #version = ''
 
-# The full version, including alpha/beta/rc tags
+# The full version, including alpha/beta/rc tags.
 #release = ''
 
 # There are two options for replacing |today|: either, you set today to some
@@ -40,7 +40,7 @@ today_fmt = '%Y-%m-%d'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-needs_sphinx = '1.1'
+needs_sphinx = '1.3'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -58,12 +58,7 @@ def addExtensionIfExists(extension):
         sys.stderr.write("Extension '%s' not found. "
                          "Some documentation may not build correctly.\n" % extension)
 
-if sys.version_info[0] >= 3:
-    addExtensionIfExists('sphinxcontrib.doxylink')
-
-# sphinxcontrib.googleanalytics is currently not working with the latest version of Sphinx
-# if os.getenv('GOOGLE_ANALYTICS', None):
-#     addExtensionIfExists('sphinxcontrib.googleanalytics')
+addExtensionIfExists('sphinxcontrib.doxylink')
 
 # The master toctree document.
 master_doc = 'index'
@@ -91,6 +86,9 @@ html_theme_path = ['.']
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+# Disable syntax highlighting of code blocks by default.
+highlight_language = 'none'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -140,7 +138,7 @@ man_pages = [
     ('manpages/ndnsec-set-default',  'ndnsec-set-default',  'change the default NDN identity, key, or certificate for the current user', None, 1),
     ('manpages/ndnsec-sign-req',     'ndnsec-sign-req',     'generate an NDN certificate signing request',  None, 1),
     ('manpages/ndnsec-unlock-tpm',   'ndnsec-unlock-tpm',   'unlock the TPM',                               None, 1),
-    ('manpages/ndn-client.conf',     'ndn-client.conf',     'configuration file for NDN platform',          None, 5),
+    ('manpages/ndn-client.conf',     'ndn-client.conf',     'configuration file for NDN applications',      None, 5),
     ('manpages/ndn-log',             'ndn-log',             'ndn-cxx logging',                              None, 7),
 ]
 
@@ -157,7 +155,3 @@ doxylink = {
 extlinks = {
     'issue': ('https://redmine.named-data.net/issues/%s', 'issue #'),
 }
-
-if os.getenv('GOOGLE_ANALYTICS', None):
-    googleanalytics_id = os.environ['GOOGLE_ANALYTICS']
-    googleanalytics_enabled = True

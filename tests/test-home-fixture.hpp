@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2018 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -22,13 +22,13 @@
 #ifndef NDN_TESTS_TEST_HOME_FIXTURE_HPP
 #define NDN_TESTS_TEST_HOME_FIXTURE_HPP
 
-#include "ndn-cxx/security/v2/key-chain.hpp"
+#include "ndn-cxx/security/key-chain.hpp"
 
 #include <cstdlib>
 #include <fstream>
 #include <initializer_list>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 
 namespace ndn {
@@ -76,8 +76,8 @@ public:
     }
 
     boost::filesystem::remove_all(m_pibDir);
-    const_cast<std::string&>(security::v2::KeyChain::getDefaultPibLocator()).clear();
-    const_cast<std::string&>(security::v2::KeyChain::getDefaultTpmLocator()).clear();
+    const_cast<std::string&>(KeyChain::getDefaultPibLocator()).clear();
+    const_cast<std::string&>(KeyChain::getDefaultTpmLocator()).clear();
   }
 
 protected:

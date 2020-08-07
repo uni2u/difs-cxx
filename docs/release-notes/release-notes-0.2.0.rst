@@ -5,25 +5,26 @@ Release date: August 25, 2014
 
 Changes since version 0.1.0:
 
-New features:
-^^^^^^^^^^^^^
+New features
+^^^^^^^^^^^^
 
 - **Base**
 
-  + The license under which the library is released is changed to **Lesser GNU Public
-    License version 3.0**.
+  + The license under which the library is released is changed to the **GNU Lesser
+    General Public License version 3.0**
 
   + New ways to use incoming Interest dispatching:
 
     * New :ndn-cxx:`InterestFilter` abstraction that supports filtering based on name
       prefixes and regular expressions.
 
-    * Separated :ndn-cxx:`Face::registerPrefix()` and :ndn-cxx:`Face::setInterestFilter()`
-      methods allow distinct operations of registering with the local NDN forwarder and setting
+    * Separate ``Face::registerPrefix()`` and ``Face::setInterestFilter()`` methods
+      allow distinct operations of registering with the local NDN forwarder and setting
       up application-specific ``OnInterest`` call dispatch using InterestFilters.
 
-  + Add support for new `NDN naming conventions
-    <http://named-data.net/doc/tech-memos/naming-conventions.pdf>`_ (:issue:`1761`)
+  + Add support for the `NDN naming conventions (revision 1)
+    <https://named-data.net/publications/techreports/ndn-tr-22-ndn-memo-naming-conventions/>`_
+    (:issue:`1761`)
 
 - **Security**
 
@@ -37,26 +38,25 @@ New features:
   + New :ndn-cxx:`SignatureSha256WithEcdsa` signature type
 
   + Updates in :ndn-cxx:`Signature` data structure to reflect changes in `NDN-TLV spec
-    0.1.1 <http://named-data.net/doc/NDN-TLV/0.1.1/>`_
+    0.1.1 <https://named-data.net/doc/NDN-packet-spec/0.1.1/>`_
 
 - **Wire encoding**
 
-  + :ndn-cxx:`Data::getFullName() <getFullName()>` method to get :ndn-cxx:`Data` packet
-    name with implicit digest
+  + ``Data::getFullName()`` method to get the Data packet name including the implicit digest
 
-  + New :ndn-cxx:`Name::getSuccessor()` method to get name successor (:issue:`1677`)
+  + ``Name::getSuccessor()`` method to get name successor (:issue:`1677`)
 
   + New in-wire refreshing of Interest's nonce (:issue:`1758`)
 
 - **Management**
 
-  + Support for :ndn-cxx:`ChannelStatus`, :ndn-cxx:`StrategyChoice` datasets
+  + Support for :ndn-cxx:`ChannelStatus` and :ndn-cxx:`StrategyChoice` datasets
 
   + Defining new common Route Origins for NFD RIB management protocol (:issue:`1719`)
 
-  + New RibEntry and Route data structures for RIB management protocol (:issue:`1764`)
+  + New ``RibEntry`` and ``Route`` data structures for RIB management protocol (:issue:`1764`)
 
-  + Add support for RIB flags for setInterestFilter and registerPrefix (:issue:`1842`)
+  + Add support for RIB flags in ``setInterestFilter()`` and ``registerPrefix()`` (:issue:`1842`)
 
 - **Miscellaneous tools**
 
@@ -71,10 +71,10 @@ New features:
 
 - **Build**
 
-  + enabled support of precompiled headers for clang and gcc compilers to speed up compilation
+  + Enabled support of precompiled headers for clang and gcc compilers to speed up compilation
 
-Updates and bug fixes:
-^^^^^^^^^^^^^^^^^^^^^^
+Updates and bug fixes
+^^^^^^^^^^^^^^^^^^^^^
 
 - **Base**
 
@@ -84,13 +84,13 @@ Updates and bug fixes:
     :ndn-cxx:`Face::put` methods (:issue:`1774`)
 
   + Cleaning up transport state on communication failure, so Face can try to reconnect
-    in the future.
+    in the future
 
-  + Fix bug with Face::removePendingInterest (:issue:`1917`)
+  + Fix bug in ``Face::removePendingInterest`` (:issue:`1917`)
 
 - **Wire encoding**
 
-  + Nonce field is now encoded as 4-byte uint8_t value, as defined by NDN-TLV spec.
+  + The Nonce field is now encoded as a 4-byte value, as defined by NDN-TLV spec
 
   + Optimized Data packet signing
 
@@ -104,27 +104,27 @@ Updates and bug fixes:
 
 - **Management**
 
-  + Add link-layer byte counts in FaceStatus data structure (:issue:`1765`)
+  + Add link-layer byte counts in ``FaceStatus`` data structure (:issue:`1765`)
 
 - **Security**
 
   + Allow user to explicitly specify the cert name prefix before 'KEY' component in
     ``ndnsec-certgen``
 
-  + ``SignatureSha256`` has been renamed to :ndn-cxx:`DigestSha256` to conform with
-    `NDN-TLV specification <http://named-data.net/doc/ndn-tlv/>`_.
+  + ``SignatureSha256`` has been renamed to :ndn-cxx:`DigestSha256` to conform to
+    `NDN-TLV specification <https://named-data.net/doc/NDN-packet-spec/0.1.1/>`_
 
-  + Add checking of ``Timestamp`` and ``Nonce`` fields in signed Interest within
+  + Add checking of Timestamp and Nonce fields in signed Interest within
     :ndn-cxx:`ValidatorConfig`
 
-  + Allow validator customization using hooks:
+  + Allow validator customization using hooks.
 
     Sub-classes of :ndn-cxx:`Validator` class can use the following hooks to fine-tune the
     validation process:
 
-      * ``preCertificateValidation`` to process received certificate before validation.
+      * ``preCertificateValidation`` to process received certificate before validation
       * ``onTimeout`` to process interest timeout
-      * ``afterCheckPolicy`` to process validation requests.
+      * ``afterCheckPolicy`` to process validation requests
 
   + Fix memory issues in ``SecPublicInfoSqlite3``
 
@@ -136,8 +136,8 @@ Updates and bug fixes:
 
 - Other minor fixes and corrections
 
-Deprecated:
-^^^^^^^^^^^
+Deprecated
+^^^^^^^^^^
 
 - ``SignatureSha256`` class, use :ndn-cxx:`DigestSha256` instead.
 
@@ -161,10 +161,10 @@ Deprecated:
 - ``CommandInterestGenerator`` and ``CommandInterestValidator`` utility classes.
   :ndn-cxx:`ValidatorConfig` should be used instead.
 
-Removed:
-^^^^^^^^
+Removed
+^^^^^^^
 
-- support of ndnd-tlv (only NFD management protocol is supported now)
+- Support for ndnd-tlv (only NFD management protocol is supported now)
 
 - ``SecPublicInfoMemory`` and ``SecTpmMemory`` classes that were no longer used
 

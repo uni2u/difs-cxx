@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -26,7 +26,6 @@
 
 #include <sqlite3.h>
 
-#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 
 namespace ndn {
@@ -328,6 +327,9 @@ PibSqlite3::getIdentities() const
 void
 PibSqlite3::setDefaultIdentity(const Name& identityName)
 {
+  if (!hasIdentity(identityName)) {
+    NDN_THROW(Pib::Error("Cannot set non-existing identity `" + identityName.toUri() + "` as default"));
+  }
   Sqlite3Statement statement(m_database, "UPDATE identities SET is_default=1 WHERE identity=?");
   statement.bind(1, identityName.wireEncode(), SQLITE_TRANSIENT);
   statement.step();

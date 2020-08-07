@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -21,6 +21,8 @@
 
 #include "ndnsec.hpp"
 #include "util.hpp"
+
+#include "ndn-cxx/util/io.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
 #if BOOST_VERSION < 106700
@@ -62,7 +64,7 @@ ndnsec_cert_dump(int argc, char** argv)
                    "unless overridden by -i/-k/-f, the name of the certificate to be exported "
                    "(e.g., /ndn/edu/ucla/KEY/cs/alice/ksk-1234567890/ID-CERT/%FD%FF%FF%FF%FF%FF%FF%FF)")
     ("repo-output,r", po::bool_switch(&isRepoOut),
-                      "publish the certificate into a repo-ng instance")
+                      "publish the certificate into an NDN repo instance")
     ("repo-host,H",   po::value<std::string>(&repoHost)->default_value("localhost"),
                       "repo hostname if --repo-output is specified")
     ("repo-port,P",   po::value<std::string>(&repoPort)->default_value("7376"),
@@ -93,7 +95,8 @@ ndnsec_cert_dump(int argc, char** argv)
     return 2;
   }
 
-  if (isIdentityName + isKeyName + isFileName > 1) {
+  int nIsNameOptions = isIdentityName + isKeyName + isFileName;
+  if (nIsNameOptions > 1) {
     std::cerr << "ERROR: at most one of '--identity', '--key', "
                  "or '--file' may be specified" << std::endl;
     return 2;
@@ -104,35 +107,20 @@ ndnsec_cert_dump(int argc, char** argv)
     return 2;
   }
 
-  security::v2::KeyChain keyChain;
-
   security::v2::Certificate certificate;
-  try {
-    if (isIdentityName) {
-      certificate = keyChain.getPib()
-                    .getIdentity(name)
-                    .getDefaultKey()
-                    .getDefaultCertificate();
-    }
-    else if (isKeyName) {
-      certificate = keyChain.getPib()
-                    .getIdentity(security::v2::extractIdentityFromKeyName(name))
-                    .getKey(name)
-                    .getDefaultCertificate();
-    }
-    else if (isFileName) {
+  if (isFileName) {
+    try {
       certificate = loadCertificate(name);
     }
-    else {
-      certificate = keyChain.getPib()
-                    .getIdentity(security::v2::extractIdentityFromCertName(name))
-                    .getKey(security::v2::extractKeyNameFromCertName(name))
-                    .getCertificate(name);
+    catch (const CannotLoadCertificate&) {
+      std::cerr << "ERROR: Cannot load the certificate from `" << name << "`" << std::endl;
+      return 1;
     }
   }
-  catch (const CannotLoadCertificate&) {
-    std::cerr << "ERROR: Cannot load the certificate from `" << name << "`" << std::endl;
-    return 1;
+  else {
+    security::v2::KeyChain keyChain;
+    certificate = getCertificateFromPib(keyChain.getPib(), name,
+                                        isIdentityName, isKeyName, nIsNameOptions == 0);
   }
 
   if (isPretty) {

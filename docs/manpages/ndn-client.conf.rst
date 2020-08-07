@@ -6,23 +6,25 @@ System configuration of NDN platform is specified in ``client.conf``.
 The configuration file ``client.conf`` is looked up in several directories in the following order:
 
 - ``$HOME/.ndn``: user-specific settings
-- ``@SYSCONFDIR@/ndn`` (``/usr/local/etc/ndn``, ``/opt/local/etc/ndn``, or other, depending how the
-  library is configured): system-wide settings
+- ``SYSCONFDIR/ndn``: system-wide settings (where ``SYSCONFDIR`` can be ``/usr/local/etc``,
+  ``/opt/local/etc``, or other, depending on how the library is configured)
 - ``/etc/ndn``: default system-wide settings
 
-Here is an example of ``client.conf`` for current ndn-cxx package:
+Here is an example of ``client.conf`` for the current ndn-cxx package:
 
 .. literalinclude:: ../../client.conf.sample
+   :language: ini
 
 
 NFD
 ---
 
 transport
-  FaceUri for default connection toward local NDN forwarder.  Only ``unix`` and ``tcp4`` FaceUris
-  can be specified here.
+  FaceUri for default connection toward local NDN forwarder.  Only ``unix``, ``tcp``, ``tcp4``, and
+  ``tcp6`` FaceUris can be specified here.
 
-  By default, ``unix:///var/run/nfd.sock`` is used.
+  By default, ``unix:///run/nfd.sock`` is used on Linux and ``unix:///var/run/nfd.sock`` is used on
+  other platforms.
 
   .. note::
     This value can be overridden using the ``NDN_CLIENT_TRANSPORT`` environment variable.

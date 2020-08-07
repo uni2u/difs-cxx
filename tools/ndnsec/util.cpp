@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -22,6 +22,7 @@
 #include "util.hpp"
 
 #include "ndn-cxx/security/impl/openssl.hpp"
+#include "ndn-cxx/util/io.hpp"
 
 #include <unistd.h>
 
@@ -65,6 +66,28 @@ getPassword(std::string& password, const std::string& prompt, bool shouldConfirm
 #else
   return false;
 #endif // NDN_CXX_HAVE_GETPASS
+}
+
+security::v2::Certificate
+getCertificateFromPib(const security::pib::Pib& pib, const Name& name,
+                      bool isIdentityName, bool isKeyName, bool isCertName)
+{
+  if (isIdentityName) {
+    return pib.getIdentity(name)
+           .getDefaultKey()
+           .getDefaultCertificate();
+  }
+  else if (isKeyName) {
+    return pib.getIdentity(security::v2::extractIdentityFromKeyName(name))
+           .getKey(name)
+           .getDefaultCertificate();
+  }
+  else if (isCertName) {
+    return pib.getIdentity(security::v2::extractIdentityFromCertName(name))
+           .getKey(security::v2::extractKeyNameFromCertName(name))
+           .getCertificate(name);
+  }
+  NDN_CXX_UNREACHABLE;
 }
 
 security::v2::Certificate

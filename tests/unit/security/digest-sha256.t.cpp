@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2018 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(DataSignature)
   testData.setContent(reinterpret_cast<uint8_t*>(content), 5);
   m_keyChain.sign(testData, security::SigningInfo(security::SigningInfo::SIGNER_TYPE_SHA256));
 
-  BOOST_CHECK_THROW(testData.getSignature().getKeyLocator(), ndn::SignatureInfo::Error);
+  BOOST_CHECK_THROW(testData.getSignatureInfo().getKeyLocator(), ndn::SignatureInfo::Error);
   verifyDigest(testData, DigestAlgorithm::SHA256);
 }
 
@@ -61,6 +61,7 @@ BOOST_AUTO_TEST_CASE(InterestSignature)
 {
   Name name("/SecurityTestDigestSha256/InterestSignature/Interest1");
   Interest testInterest(name);
+  testInterest.setCanBePrefix(false);
 
   m_keyChain.sign(testInterest, security::SigningInfo(security::SigningInfo::SIGNER_TYPE_SHA256));
   verifyDigest(testInterest, DigestAlgorithm::SHA256);

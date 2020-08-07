@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -19,14 +19,20 @@
  * See AUTHORS.md for complete list of ndn-cxx authors and contributors.
  */
 
-#ifndef NDN_INTEREST_HPP
-#define NDN_INTEREST_HPP
+#ifndef NDN_CXX_INTEREST_HPP
+#define NDN_CXX_INTEREST_HPP
 
 #include "ndn-cxx/delegation-list.hpp"
-#include "ndn-cxx/name.hpp"
 #include "ndn-cxx/detail/packet-base.hpp"
+#include "ndn-cxx/name.hpp"
+#include "ndn-cxx/security/security-common.hpp"
+#include "ndn-cxx/signature-info.hpp"
+#include "ndn-cxx/util/string-helper.hpp"
 #include "ndn-cxx/util/time.hpp"
 
+#include <array>
+
+#include <boost/endian/conversion.hpp>
 #include <boost/logic/tribool.hpp>
 
 namespace ndn {
@@ -38,7 +44,8 @@ class Data;
  */
 const time::milliseconds DEFAULT_INTEREST_LIFETIME = 4_s;
 
-/** @brief Represents an Interest packet.
+/** @brief Represents an %Interest packet.
+ *  @sa https://named-data.net/doc/NDN-packet-spec/0.3/interest.html
  */
 class Interest : public PacketBase, public std::enable_shared_from_this<Interest>
 {
@@ -47,6 +54,52 @@ public:
   {
   public:
     using tlv::Error::Error;
+  };
+
+  class Nonce final : public std::array<uint8_t, 4>
+  {
+    using Base = std::array<uint8_t, 4>;
+
+  public:
+    Nonce() = default;
+
+    // implicit conversion from uint32_t
+    Nonce(uint32_t n) noexcept
+    {
+      boost::endian::native_to_big_inplace(n);
+      std::memcpy(data(), &n, sizeof(n));
+    }
+
+    Nonce(uint8_t n1, uint8_t n2, uint8_t n3, uint8_t n4) noexcept
+    {
+      data()[0] = n1;
+      data()[1] = n2;
+      data()[2] = n3;
+      data()[3] = n4;
+    }
+
+  private: // non-member operators
+    // NOTE: the following "hidden friend" operators are available via
+    //       argument-dependent lookup only and must be defined inline.
+
+    friend bool
+    operator==(const Nonce& lhs, const Nonce& rhs) noexcept
+    {
+      return static_cast<const Base&>(lhs) == static_cast<const Base&>(rhs);
+    }
+
+    friend bool
+    operator!=(const Nonce& lhs, const Nonce& rhs) noexcept
+    {
+      return static_cast<const Base&>(lhs) != static_cast<const Base&>(rhs);
+    }
+
+    friend std::ostream&
+    operator<<(std::ostream& os, const Nonce& nonce)
+    {
+      printHex(os, nonce.data(), nonce.size(), false);
+      return os;
+    }
   };
 
   /** @brief Construct an Interest with given @p name and @p lifetime.
@@ -66,18 +119,18 @@ public:
   explicit
   Interest(const Block& wire);
 
-  /** @brief Prepend wire encoding to @p encoder according to NDN Packet Format v0.3.
+  /** @brief Prepend wire encoding to @p encoder.
    */
   template<encoding::Tag TAG>
   size_t
   wireEncode(EncodingImpl<TAG>& encoder) const;
 
-  /** @brief Encode into a Block according to NDN Packet Format v0.3.
+  /** @brief Encode into a Block.
    */
   const Block&
   wireEncode() const;
 
-  /** @brief Decode from @p wire according to NDN Packet Format v0.3.
+  /** @brief Decode from @p wire.
    */
   void
   wireDecode(const Block& wire);
@@ -85,7 +138,7 @@ public:
   /** @brief Check if this instance has cached wire encoding.
    */
   bool
-  hasWire() const
+  hasWire() const noexcept
   {
     return m_wire.hasWire();
   }
@@ -228,13 +281,15 @@ public: // element access
    *
    *  If nonce was not present, it is added and assigned a random value.
    */
-  uint32_t
+  Nonce
   getNonce() const;
 
-  /** @brief Set nonce value.
+  /** @brief Set the Interest's nonce.
+   *
+   *  Use `setNonce(nullopt)` to remove any nonce from the Interest.
    */
   Interest&
-  setNonce(uint32_t nonce);
+  setNonce(optional<Nonce> nonce);
 
   /** @brief Change nonce value.
    *
@@ -269,12 +324,22 @@ public: // element access
   Interest&
   setHopLimit(optional<uint8_t> hopLimit);
 
+  /**
+   * @brief Return whether this Interest has any ApplicationParameters.
+   */
   bool
   hasApplicationParameters() const noexcept
   {
     return !m_parameters.empty();
   }
 
+  /**
+   * @brief Get the ApplicationParameters.
+   *
+   * If the element is not present, an invalid Block will be returned.
+   *
+   * @sa hasApplicationParameters()
+   */
   Block
   getApplicationParameters() const
   {
@@ -284,52 +349,99 @@ public: // element access
       return m_parameters.front();
   }
 
-  /** @brief Set ApplicationParameters from a Block.
-   *  @return a reference to this Interest
+  /**
+   * @brief Set ApplicationParameters from a Block.
+   * @param block TLV block to be used as ApplicationParameters; must be valid
+   * @return a reference to this Interest
    *
-   *  If the block is default-constructed, this will set a zero-length ApplicationParameters
-   *  element. Else, if the block's TLV-TYPE is ApplicationParameters, it will be used directly
-   *  as this Interest's ApplicationParameters element. Else, the block will be nested into an
-   *  ApplicationParameters element.
+   * If the block's TLV-TYPE is tlv::ApplicationParameters, it will be used directly as
+   * this Interest's ApplicationParameters element. Otherwise, the block will be nested
+   * into an ApplicationParameters element.
    *
-   *  This function will also recompute the value of the ParametersSha256DigestComponent in the
-   *  Interest's name. If the name does not contain a ParametersSha256DigestComponent, one will
-   *  be appended to it.
+   * This function will also recompute the value of the ParametersSha256DigestComponent in the
+   * Interest's name. If the name does not contain a ParametersSha256DigestComponent, one will
+   * be appended to it.
    */
   Interest&
-  setApplicationParameters(const Block& parameters);
+  setApplicationParameters(const Block& block);
 
-  /** @brief Set ApplicationParameters by copying from a raw buffer.
-   *  @param value points to a buffer from which the TLV-VALUE of the parameters will be copied;
-   *               may be nullptr if @p length is zero
-   *  @param length size of the buffer
-   *  @return a reference to this Interest
+  /**
+   * @brief Set ApplicationParameters by copying from a raw buffer.
+   * @param value points to a buffer from which the TLV-VALUE of the parameters will be copied;
+   *              may be nullptr if @p length is zero
+   * @param length size of the buffer
+   * @return a reference to this Interest
    *
-   *  This function will also recompute the value of the ParametersSha256DigestComponent in the
-   *  Interest's name. If the name does not contain a ParametersSha256DigestComponent, one will
-   *  be appended to it.
+   * This function will also recompute the value of the ParametersSha256DigestComponent in the
+   * Interest's name. If the name does not contain a ParametersSha256DigestComponent, one will
+   * be appended to it.
    */
   Interest&
   setApplicationParameters(const uint8_t* value, size_t length);
 
-  /** @brief Set ApplicationParameters from a shared buffer.
-   *  @param value buffer containing the TLV-VALUE of the parameters; must not be nullptr
-   *  @return a reference to this Interest
+  /**
+   * @brief Set ApplicationParameters from a shared buffer.
+   * @param value buffer containing the TLV-VALUE of the parameters; must not be nullptr
+   * @return a reference to this Interest
    *
-   *  This function will also recompute the value of the ParametersSha256DigestComponent in the
-   *  Interest's name. If the name does not contain a ParametersSha256DigestComponent, one will
-   *  be appended to it.
+   * This function will also recompute the value of the ParametersSha256DigestComponent in the
+   * Interest's name. If the name does not contain a ParametersSha256DigestComponent, one will
+   * be appended to it.
    */
   Interest&
   setApplicationParameters(ConstBufferPtr value);
 
-  /** @brief Remove the ApplicationParameters element from this Interest.
-   *  @post hasApplicationParameters() == false
+  /**
+   * @brief Remove the ApplicationParameters element from this Interest.
+   * @return a reference to this Interest
+   * @post hasApplicationParameters() == false
    *
-   *  This function will also remove any ParametersSha256DigestComponents from the Interest's name.
+   * This function will also remove any InterestSignatureInfo and InterestSignatureValue elements
+   * in the Interest, as well as any ParametersSha256DigestComponents in the Interest's name.
    */
   Interest&
   unsetApplicationParameters();
+
+  /** @brief Return whether the Interest is signed
+   *  @warning This function only determines whether signature information is present in the
+   *           Interest and does not verify that the signature is valid.
+   */
+  bool
+  isSigned() const noexcept;
+
+  /** @brief Get the InterestSignatureInfo
+   *  @retval nullopt InterestSignatureInfo is not present
+   */
+  optional<SignatureInfo>
+  getSignatureInfo() const;
+
+  /** @brief Set the InterestSignatureInfo
+   */
+  Interest&
+  setSignatureInfo(const SignatureInfo& info);
+
+  /** @brief Get the InterestSignatureValue
+   *
+   *  If the element is not present, an invalid Block will be returned.
+   */
+  Block
+  getSignatureValue() const;
+
+  /** @brief Set the InterestSignatureValue
+   *  @param value Buffer containing the TLV-VALUE of the InterestSignatureValue; must not be nullptr
+   *  @throw Error InterestSignatureInfo is unset
+   *
+   *  InterestSignatureInfo must be set before setting InterestSignatureValue
+   */
+  Interest&
+  setSignatureValue(ConstBufferPtr value);
+
+  /** @brief Extract ranges of Interest covered by the signature in Packet Specification v0.3
+   *  @throw Error Interest cannot be encoded or is missing ranges necessary for signing
+   *  @warning The returned pointers will be invalidated if wireDecode() or wireEncode() are called.
+   */
+  InputBuffers
+  extractSignedRanges() const;
 
 public: // ParametersSha256DigestComponent support
   static bool
@@ -380,6 +492,9 @@ private:
   static ssize_t
   findParametersDigestComponent(const Name& name);
 
+  std::vector<Block>::const_iterator
+  findFirstParameter(uint32_t type) const;
+
 #ifdef NDN_CXX_HAVE_TESTS
 public:
   /// If true, not setting CanBePrefix results in an error in wireEncode().
@@ -392,7 +507,7 @@ private:
 
   Name m_name;
   DelegationList m_forwardingHint;
-  mutable optional<uint32_t> m_nonce;
+  mutable optional<Nonce> m_nonce;
   time::milliseconds m_interestLifetime;
   optional<uint8_t> m_hopLimit;
   mutable bool m_isCanBePrefixSet = false;
@@ -417,4 +532,4 @@ operator<<(std::ostream& os, const Interest& interest);
 
 } // namespace ndn
 
-#endif // NDN_INTEREST_HPP
+#endif // NDN_CXX_INTEREST_HPP

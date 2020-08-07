@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -21,8 +21,8 @@
  * @author Alexander Afanasyev <http://lasr.cs.ucla.edu/afanasyev/index.html>
  */
 
-#ifndef NDN_ENCODING_BLOCK_HPP
-#define NDN_ENCODING_BLOCK_HPP
+#ifndef NDN_CXX_ENCODING_BLOCK_HPP
+#define NDN_CXX_ENCODING_BLOCK_HPP
 
 #include "ndn-cxx/encoding/buffer.hpp"
 #include "ndn-cxx/encoding/encoding-buffer-fwd.hpp"
@@ -36,8 +36,8 @@ class const_buffer;
 
 namespace ndn {
 
-/** @brief Represents a TLV element of NDN packet format
- *  @sa https://named-data.net/doc/NDN-packet-spec/current/
+/** @brief Represents a TLV element of the NDN packet format.
+ *  @sa https://named-data.net/doc/NDN-packet-spec/0.3/tlv.html#tlv-encoding
  */
 class Block
 {
@@ -182,25 +182,12 @@ public: // wire format
   /** @brief Check if the Block is valid
    *
    *  A Block is valid unless it has an invalid TLV-TYPE or is default-constructed.
-   *  In particular, a Block with zero-length TLV-VALUE *is* valid.
+   *  In particular, a Block with zero-length TLV-VALUE *is valid*.
    */
   bool
   isValid() const noexcept
   {
     return m_type != tlv::Invalid;
-  }
-
-  /** @brief Check if the Block is empty
-   *
-   *  A Block is considered empty *iff* it is not valid, i.e., isValid() returns false.
-   *
-   *  @warning Note that an empty Block is *not* the same as a valid but zero-length Block.
-   *  @deprecated Use Block::isValid()
-   */
-  NDN_CXX_NODISCARD bool
-  empty() const noexcept
-  {
-    return !isValid();
   }
 
   /** @brief Reset the Block to a default-constructed state
@@ -518,4 +505,4 @@ operator "" _block(const char* input, std::size_t len);
 
 } // namespace ndn
 
-#endif // NDN_ENCODING_BLOCK_HPP
+#endif // NDN_CXX_ENCODING_BLOCK_HPP

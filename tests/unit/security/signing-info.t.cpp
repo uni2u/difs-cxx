@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -42,8 +42,9 @@ BOOST_AUTO_TEST_CASE(Basic)
   SigningInfo info;
 
   BOOST_CHECK_EQUAL(info.getSignerType(), SigningInfo::SIGNER_TYPE_NULL);
-  BOOST_CHECK_EQUAL(info.getSignerName(), SigningInfo::getEmptyName());
+  BOOST_CHECK_EQUAL(info.getSignerName(), Name());
   BOOST_CHECK_EQUAL(info.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(info.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   const SignatureInfo& sigInfo = info.getSignatureInfo();
   BOOST_CHECK_EQUAL(sigInfo.getSignatureType(), -1);
@@ -53,51 +54,61 @@ BOOST_AUTO_TEST_CASE(Basic)
   BOOST_CHECK_EQUAL(info.getSignerType(), SigningInfo::SIGNER_TYPE_ID);
   BOOST_CHECK_EQUAL(info.getSignerName(), id);
   BOOST_CHECK_EQUAL(info.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(info.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   SigningInfo infoId(SigningInfo::SIGNER_TYPE_ID, id);
   BOOST_CHECK_EQUAL(infoId.getSignerType(), SigningInfo::SIGNER_TYPE_ID);
   BOOST_CHECK_EQUAL(infoId.getSignerName(), id);
   BOOST_CHECK_EQUAL(infoId.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(infoId.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   info.setSigningKeyName(key);
   BOOST_CHECK_EQUAL(info.getSignerType(), SigningInfo::SIGNER_TYPE_KEY);
   BOOST_CHECK_EQUAL(info.getSignerName(), key);
   BOOST_CHECK_EQUAL(info.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(info.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   SigningInfo infoKey(SigningInfo::SIGNER_TYPE_KEY, key);
   BOOST_CHECK_EQUAL(infoKey.getSignerType(), SigningInfo::SIGNER_TYPE_KEY);
   BOOST_CHECK_EQUAL(infoKey.getSignerName(), key);
   BOOST_CHECK_EQUAL(infoKey.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(infoKey.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   info.setSigningCertName(cert);
   BOOST_CHECK_EQUAL(info.getSignerType(), SigningInfo::SIGNER_TYPE_CERT);
   BOOST_CHECK_EQUAL(info.getSignerName(), cert);
   BOOST_CHECK_EQUAL(info.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(info.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   SigningInfo infoCert(SigningInfo::SIGNER_TYPE_CERT, cert);
   BOOST_CHECK_EQUAL(infoCert.getSignerType(), SigningInfo::SIGNER_TYPE_CERT);
   BOOST_CHECK_EQUAL(infoCert.getSignerName(), cert);
   BOOST_CHECK_EQUAL(infoCert.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(infoCert.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   info.setSha256Signing();
   BOOST_CHECK_EQUAL(info.getSignerType(), SigningInfo::SIGNER_TYPE_SHA256);
-  BOOST_CHECK_EQUAL(info.getSignerName(), SigningInfo::getEmptyName());
+  BOOST_CHECK_EQUAL(info.getSignerName(), Name());
   BOOST_CHECK_EQUAL(info.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(info.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   SigningInfo infoSha(SigningInfo::SIGNER_TYPE_SHA256);
   BOOST_CHECK_EQUAL(infoSha.getSignerType(), SigningInfo::SIGNER_TYPE_SHA256);
-  BOOST_CHECK_EQUAL(infoSha.getSignerName(), SigningInfo::getEmptyName());
+  BOOST_CHECK_EQUAL(infoSha.getSignerName(), Name());
   BOOST_CHECK_EQUAL(infoSha.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(infoSha.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   std::string encodedKey("QjM3NEEyNkE3MTQ5MDQzN0FBMDI0RTRGQURENUI0OTdGRE"
                          "ZGMUE4RUE2RkYxMkY2RkI2NUFGMjcyMEI1OUNDRg==");
   info.setSigningHmacKey(encodedKey);
   BOOST_CHECK_EQUAL(info.getSignerType(), SigningInfo::SIGNER_TYPE_HMAC);
   BOOST_CHECK_EQUAL(info.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(info.getSignedInterestFormat(), SignedInterestFormat::V02);
 
   SigningInfo infoHmac(SigningInfo::SIGNER_TYPE_HMAC, info.getSignerName());
   BOOST_CHECK_EQUAL(infoHmac.getSignerType(), SigningInfo::SIGNER_TYPE_HMAC);
   BOOST_CHECK_EQUAL(infoHmac.getDigestAlgorithm(), DigestAlgorithm::SHA256);
+  BOOST_CHECK_EQUAL(infoHmac.getSignedInterestFormat(), SignedInterestFormat::V02);
 }
 
 BOOST_AUTO_TEST_CASE(CustomSignatureInfo)
@@ -111,7 +122,7 @@ BOOST_AUTO_TEST_CASE(CustomSignatureInfo)
 
   BOOST_CHECK_EQUAL(info1.getSignatureInfo(), si);
 
-  SigningInfo info2(SigningInfo::SIGNER_TYPE_NULL, SigningInfo::getEmptyName(), si);
+  SigningInfo info2(SigningInfo::SIGNER_TYPE_NULL, Name(), si);
   BOOST_CHECK_EQUAL(info2.getSignatureInfo(), si);
 }
 
@@ -119,7 +130,7 @@ BOOST_AUTO_TEST_CASE(FromString)
 {
   SigningInfo infoDefault("");
   BOOST_CHECK_EQUAL(infoDefault.getSignerType(), SigningInfo::SIGNER_TYPE_NULL);
-  BOOST_CHECK_EQUAL(infoDefault.getSignerName(), SigningInfo::getEmptyName());
+  BOOST_CHECK_EQUAL(infoDefault.getSignerName(), Name());
   BOOST_CHECK_EQUAL(infoDefault.getDigestAlgorithm(), DigestAlgorithm::SHA256);
 
   SigningInfo infoId("id:/my-identity");
@@ -145,7 +156,7 @@ BOOST_AUTO_TEST_CASE(FromString)
 
   SigningInfo infoSha("id:/localhost/identity/digest-sha256");
   BOOST_CHECK_EQUAL(infoSha.getSignerType(), SigningInfo::SIGNER_TYPE_SHA256);
-  BOOST_CHECK_EQUAL(infoSha.getSignerName(), SigningInfo::getEmptyName());
+  BOOST_CHECK_EQUAL(infoSha.getSignerName(), Name());
   BOOST_CHECK_EQUAL(infoSha.getDigestAlgorithm(), DigestAlgorithm::SHA256);
 }
 
@@ -258,6 +269,14 @@ BOOST_AUTO_TEST_CASE(OperatorEqualsDifferentTypes)
   BOOST_CHECK_EQUAL(info1, info2);
   info2 = SigningInfo("id:/my-id");
   // Change signature type, check inequality
+  BOOST_CHECK_NE(info1, info2);
+
+  info1 = SigningInfo(SigningInfo::SIGNER_TYPE_SHA256);
+  info2 = SigningInfo(SigningInfo::SIGNER_TYPE_SHA256);
+  // Check equality for signed Interest format
+  BOOST_CHECK_EQUAL(info1, info2);
+  info2.setSignedInterestFormat(SignedInterestFormat::V03);
+  // Change signed Interest format, check inequality
   BOOST_CHECK_NE(info1, info2);
 }
 

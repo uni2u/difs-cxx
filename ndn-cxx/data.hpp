@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2018 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -19,18 +19,21 @@
  * See AUTHORS.md for complete list of ndn-cxx authors and contributors.
  */
 
-#ifndef NDN_DATA_HPP
-#define NDN_DATA_HPP
+#ifndef NDN_CXX_DATA_HPP
+#define NDN_CXX_DATA_HPP
 
-#include "ndn-cxx/meta-info.hpp"
-#include "ndn-cxx/name.hpp"
-#include "ndn-cxx/signature.hpp"
 #include "ndn-cxx/detail/packet-base.hpp"
 #include "ndn-cxx/encoding/block.hpp"
+#include "ndn-cxx/meta-info.hpp"
+#include "ndn-cxx/name.hpp"
+#include "ndn-cxx/signature-info.hpp"
 
 namespace ndn {
 
-/** @brief Represents a Data packet.
+class Signature;
+
+/** @brief Represents a %Data packet.
+ *  @sa https://named-data.net/doc/NDN-packet-spec/0.3/data.html
  */
 class Data : public PacketBase, public std::enable_shared_from_this<Data>
 {
@@ -42,27 +45,29 @@ public:
   };
 
   /** @brief Construct an unsigned Data packet with given @p name and empty Content.
-   *  @warning In certain contexts that use `Data::shared_from_this()`, Data must be created
-   *           using `make_shared`. Otherwise, `shared_from_this()` will trigger undefined behavior.
+   *  @warning In certain contexts that use `Data::shared_from_this()`, Data must be created using
+   *           `std::make_shared`. Otherwise, `shared_from_this()` may trigger undefined behavior.
+   *           One example where this is necessary is storing Data into a subclass of InMemoryStorage.
    */
   explicit
   Data(const Name& name = Name());
 
   /** @brief Construct a Data packet by decoding from @p wire.
-   *  @param wire @c tlv::Data element as defined in NDN Packet Format v0.2 or v0.3.
-   *              It may be signed or unsigned.
-   *  @warning In certain contexts that use `Data::shared_from_this()`, Data must be created
-   *           using `make_shared`. Otherwise, `shared_from_this()` will trigger undefined behavior.
+   *  @param wire TLV block of type tlv::Data; may be signed or unsigned.
+   *  @warning In certain contexts that use `Data::shared_from_this()`, Data must be created using
+   *           `std::make_shared`. Otherwise, `shared_from_this()` may trigger undefined behavior.
+   *           One example where this is necessary is storing Data into a subclass of InMemoryStorage.
    */
   explicit
   Data(const Block& wire);
 
-  /** @brief Prepend wire encoding to @p encoder in NDN Packet Format v0.2.
-   *  @param encoder EncodingEstimator or EncodingBuffer instance
-   *  @param wantUnsignedPortionOnly If true, only prepends Name, MetaInfo, Content, and
-   *         SignatureInfo to @p encoder, but omit SignatureValue and outmost Type-Length of Data
-   *         element. This is intended to be used with wireEncode(encoder, signatureValue).
-   *  @throw Error SignatureBits are not provided and wantUnsignedPortionOnly is false.
+  /** @brief Prepend wire encoding to @p encoder
+   *  @param encoder EncodingEstimator or EncodingBuffer instance.
+   *  @param wantUnsignedPortionOnly If true, prepend only Name, MetaInfo, Content, and
+   *         SignatureInfo to @p encoder, but omit SignatureValue and the outermost TLV
+   *         Type and Length of the Data element. This is intended to be used with
+   *         wireEncode(EncodingBuffer&, const Block&) const.
+   *  @throw Error %Signature is not present and @p wantUnsignedPortionOnly is false.
    */
   template<encoding::Tag TAG>
   size_t
@@ -70,10 +75,10 @@ public:
 
   /** @brief Finalize Data packet encoding with the specified SignatureValue
    *  @param encoder EncodingBuffer containing Name, MetaInfo, Content, and SignatureInfo, but
-   *                 without SignatureValue or outmost Type-Length of Data element
-   *  @param signatureValue SignatureValue element
+   *                 without SignatureValue and the outermost Type-Length of the Data element.
+   *  @param signatureValue SignatureValue element.
    *
-   *  This method is intended to be used in concert with Data::wireEncode(encoder, true)
+   *  This method is intended to be used in concert with `wireEncode(encoder, true)`, e.g.:
    *  @code
    *     Data data;
    *     ...
@@ -87,17 +92,13 @@ public:
   const Block&
   wireEncode(EncodingBuffer& encoder, const Block& signatureValue) const;
 
-  /** @brief Encode to a @c Block.
-   *  @pre Data is signed.
-   *
-   *  Normally, this function encodes to NDN Packet Format v0.2. However, if this instance has
-   *  cached wire encoding (\c hasWire() is true), the cached encoding is returned and it might
-   *  be in v0.3 format.
+  /** @brief Encode into a Block.
+   *  @pre Data must be signed.
    */
   const Block&
   wireEncode() const;
 
-  /** @brief Decode from @p wire in NDN Packet Format v0.2 or v0.3.
+  /** @brief Decode from @p wire.
    */
   void
   wireDecode(const Block& wire);
@@ -105,7 +106,7 @@ public:
   /** @brief Check if this instance has cached wire encoding.
    */
   bool
-  hasWire() const
+  hasWire() const noexcept
   {
     return m_wire.hasWire();
   }
@@ -121,7 +122,7 @@ public: // Data fields
   /** @brief Get name
    */
   const Name&
-  getName() const
+  getName() const noexcept
   {
     return m_name;
   }
@@ -135,7 +136,7 @@ public: // Data fields
   /** @brief Get MetaInfo
    */
   const MetaInfo&
-  getMetaInfo() const
+  getMetaInfo() const noexcept
   {
     return m_metaInfo;
   }
@@ -146,58 +147,122 @@ public: // Data fields
   Data&
   setMetaInfo(const MetaInfo& metaInfo);
 
-  /** @brief Get Content
+  /**
+   * @brief Return whether this Data has a Content element
+   */
+  bool
+  hasContent() const noexcept
+  {
+    return m_content.isValid();
+  }
+
+  /**
+   * @brief Get the Content element
    *
-   *  The Content value is accessible through value()/value_size() or value_begin()/value_end()
-   *  methods of the Block class.
+   * If the element is not present (hasContent() == false), an invalid Block will be returned.
+   *
+   * The value of the returned Content Block (if valid) can be accessed through
+   * Block::value() / Block::value_size() or Block::value_begin() / Block::value_end().
+   *
+   * @sa hasContent()
+   * @sa Block::blockFromValue(), Block::parse()
    */
   const Block&
-  getContent() const;
+  getContent() const noexcept
+  {
+    return m_content;
+  }
 
-  /** @brief Set Content from a block
+  /**
+   * @brief Set Content from a Block
+   * @param block TLV block to be used as Content; must be valid
+   * @return a reference to this Data, to allow chaining
    *
-   *  If block's TLV-TYPE is Content, it will be used directly as Data's Content element.
-   *  If block's TLV-TYPE is not Content, it will be nested into a Content element.
-   *
-   *  @return a reference to this Data, to allow chaining
+   * If the block's TLV-TYPE is tlv::Content, it will be used directly as this Data's
+   * Content element. Otherwise, the block will be nested into a Content element.
    */
   Data&
   setContent(const Block& block);
 
-  /** @brief Copy Content value from raw buffer
-   *  @param value pointer to the first octet of the value
-   *  @param valueSize size of the raw buffer
-   *  @return a reference to this Data, to allow chaining
+  /**
+   * @brief Set Content by copying from a raw buffer
+   * @param value buffer with the TLV-VALUE of the content; may be nullptr if @p length is zero
+   * @param length size of the buffer
+   * @return a reference to this Data, to allow chaining
    */
   Data&
-  setContent(const uint8_t* value, size_t valueSize);
+  setContent(const uint8_t* value, size_t length);
 
-  /** @brief Set Content from wire buffer
-   *  @param value Content value, which does not need to be a TLV element
-   *  @return a reference to this Data, to allow chaining
+  /**
+   * @brief Set Content from a shared buffer
+   * @param value buffer with the TLV-VALUE of the content; must not be nullptr
+   * @return a reference to this Data, to allow chaining
    */
   Data&
   setContent(ConstBufferPtr value);
 
-  /** @brief Get Signature
+  /**
+   * @brief Remove the Content element
+   * @return a reference to this Data, to allow chaining
+   * @post hasContent() == false
    */
-  const Signature&
-  getSignature() const
-  {
-    return m_signature;
-  }
+  Data&
+  unsetContent();
+
+  /** @brief Get Signature
+   *  @deprecated Use getSignatureInfo and getSignatureValue
+   */
+  [[deprecated("use getSignatureInfo and getSignatureValue")]]
+  Signature
+  getSignature() const;
 
   /** @brief Set Signature
+   *  @deprecated Use setSignatureInfo and setSignatureValue
    *  @return a reference to this Data, to allow chaining
    */
+  [[deprecated("use setSignatureInfo and setSignatureValue")]]
   Data&
   setSignature(const Signature& signature);
 
-  /** @brief Set SignatureValue
+  /** @brief Get SignatureInfo
+   */
+  const SignatureInfo&
+  getSignatureInfo() const noexcept
+  {
+    return m_signatureInfo;
+  }
+
+  /** @brief Set SignatureInfo
+   *
+   *  This is a low-level function that should not normally be called directly by applications.
+   *  Instead, provide a SignatureInfo to the SigningInfo object passed to KeyChain::sign().
+   *
    *  @return a reference to this Data, to allow chaining
+   *  @warning SignatureInfo is overwritten when the packet is signed via KeyChain::sign().
+   *  @sa SigningInfo
    */
   Data&
-  setSignatureValue(const Block& value);
+  setSignatureInfo(const SignatureInfo& info);
+
+  /** @brief Get SignatureValue
+   */
+  const Block&
+  getSignatureValue() const noexcept
+  {
+    return m_signatureValue;
+  }
+
+  /** @brief Set SignatureValue
+   *  @param value buffer containing the TLV-VALUE of the SignatureValue; must not be nullptr
+   *
+   *  This is a low-level function that should not normally be called directly by applications.
+   *  Instead, use KeyChain::sign() to sign the packet.
+   *
+   *  @return a reference to this Data, to allow chaining
+   *  @warning SignatureValue is overwritten when the packet is signed via KeyChain::sign().
+   */
+  Data&
+  setSignatureValue(ConstBufferPtr value);
 
 public: // MetaInfo fields
   uint32_t
@@ -227,6 +292,24 @@ public: // MetaInfo fields
   Data&
   setFinalBlock(optional<name::Component> finalBlockId);
 
+public: // SignatureInfo fields
+  /** @brief Get SignatureType
+   *  @return tlv::SignatureTypeValue, or -1 to indicate the signature is invalid
+   */
+  int32_t
+  getSignatureType() const noexcept
+  {
+    return m_signatureInfo.getSignatureType();
+  }
+
+  /** @brief Get KeyLocator
+   */
+  optional<KeyLocator>
+  getKeyLocator() const noexcept
+  {
+    return m_signatureInfo.hasKeyLocator() ? make_optional(m_signatureInfo.getKeyLocator()) : nullopt;
+  }
+
 protected:
   /** @brief Clear wire encoding and cached FullName
    *  @note This does not clear the SignatureValue.
@@ -238,7 +321,8 @@ private:
   Name m_name;
   MetaInfo m_metaInfo;
   Block m_content;
-  Signature m_signature;
+  SignatureInfo m_signatureInfo;
+  Block m_signatureValue;
 
   mutable Block m_wire;
   mutable Name m_fullName; ///< cached FullName computed from m_wire
@@ -266,4 +350,4 @@ operator!=(const Data& lhs, const Data& rhs)
 
 } // namespace ndn
 
-#endif // NDN_DATA_HPP
+#endif // NDN_CXX_DATA_HPP

@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2013-2019 Regents of the University of California.
+ * Copyright (c) 2013-2020 Regents of the University of California.
  *
  * This file is part of ndn-cxx library (NDN C++ library with eXperimental eXtensions).
  *
@@ -128,6 +128,9 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(IdentityManagement, T, PibImpls, T)
   // add id2 again, should be default
   this->pib.addIdentity(this->id2);
   BOOST_CHECK_EQUAL(this->pib.getDefaultIdentity(), this->id2);
+
+  // try to set non-existing identity as a default
+  BOOST_CHECK_THROW(this->pib.setDefaultIdentity("/non-existing-identity"), Pib::Error);
 
   // get all identities, should contain id1 and id2
   std::set<Name> idNames = this->pib.getIdentities();
@@ -331,7 +334,8 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(Overwrite, T, PibImpls, T)
   // Create a fake cert with the same name
   auto cert2 = this->id1Key2Cert1;
   cert2.setName(this->id1Key1Cert1.getName());
-  cert2.setSignature(this->id1Key2Cert1.getSignature());
+  BOOST_CHECK_EQUAL(cert2.getSignatureInfo(), this->id1Key2Cert1.getSignatureInfo());
+  BOOST_CHECK_EQUAL(cert2.getSignatureValue(), this->id1Key2Cert1.getSignatureValue());
   this->pib.addCertificate(cert2);
 
   auto cert3 = this->pib.getCertificate(this->id1Key1Cert1.getName());
