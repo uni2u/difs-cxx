@@ -727,6 +727,10 @@ KeyChain::sign(const InputBuffers& bufs, const Name& keyName, DigestAlgorithm di
     OBufferStream os;
     bufferSource(bufs) >> digestFilter(DigestAlgorithm::SHA256) >> streamSink(os);
     return os.buf();
+  } else if (keyName == SigningInfo::getDigestBlake2sIdentity()) {
+    OBufferStream os;
+    bufferSource(bufs) >> digestFilter(DigestAlgorithm::BLAKE2S_256) >> streamSink(os);
+    return os.buf();
   }
 
   auto signature = m_tpm->sign(bufs, keyName, digestAlgorithm);
