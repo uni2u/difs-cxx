@@ -54,8 +54,15 @@ SigningInfo::getDigestSha256Identity()
 const Name&
 SigningInfo::getDigestBlake2sIdentity()
 {
-  static Name digestBlake2sIdentity("/localhost/identity/digest-blake3");
+  static Name digestBlake2sIdentity("/localhost/identity/digest-blake2s");
   return digestBlake2sIdentity;
+}
+
+const Name&
+SigningInfo::getDigestBlake3Identity()
+{
+  static Name digestBlake3Identity("/localhost/identity/digest-blake3");
+  return digestBlake3Identity;
 }
 
 const Name&
@@ -74,7 +81,7 @@ SigningInfo::SigningInfo(SignerType signerType,
   , m_info(signatureInfo)
   , m_signedInterestFormat(SignedInterestFormat::V02)
 {
-  BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_BLAKE2S);
+  BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_BLAKE3);
 }
 
 SigningInfo::SigningInfo(const Identity& identity)
@@ -223,6 +230,8 @@ operator<<(std::ostream& os, const SigningInfo& si)
       return os << "id:" << si.getSignerName();
     case SigningInfo::SIGNER_TYPE_BLAKE2S:
       return os << "id:" << SigningInfo::getDigestBlake2sIdentity();
+    case SigningInfo::SIGNER_TYPE_BLAKE3:
+      return os << "id:" << SigningInfo::getDigestBlake3Identity();
   }
   NDN_THROW(std::invalid_argument("Unknown signer type"));
   return os;

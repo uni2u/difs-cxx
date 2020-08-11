@@ -71,10 +71,16 @@ SigningInfo
 signingWithSha256();
 
 /**
- * \return a SigningInfo for signing with Blake3
+ * \return a SigningInfo for signing with Blake2s
  */
 SigningInfo
 signingWithBlake2s();
+
+/**
+ * \return a SigningInfo for signing with Blake3
+ */
+SigningInfo
+signingWithBlake3();
 
 } // namespace security
 
@@ -83,6 +89,7 @@ using security::signingByKey;
 using security::signingByCertificate;
 using security::signingWithSha256;
 using security::signingWithBlake2s;
+using security::signingWithBlake3;
 
 } // namespace ndn
 

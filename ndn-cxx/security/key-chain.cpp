@@ -690,6 +690,11 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       NDN_LOG_TRACE("Prepared signature info: "<< sigInfo);
       return std::make_tuple(SigningInfo::getDigestBlake2sIdentity(), sigInfo);
     }
+    case SigningInfo::SIGNER_TYPE_BLAKE3: {
+      sigInfo.setSignatureType(tlv::DigestBlake3);
+      NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
+      return std::make_tuple(SigningInfo::getDigestBlake3Identity(), sigInfo);
+    }
     default: {
       NDN_THROW(InvalidSigningInfoError("Unrecognized signer type " +
                                         boost::lexical_cast<std::string>(params.getSignerType())));
@@ -730,6 +735,10 @@ KeyChain::sign(const InputBuffers& bufs, const Name& keyName, DigestAlgorithm di
   } else if (keyName == SigningInfo::getDigestBlake2sIdentity()) {
     OBufferStream os;
     bufferSource(bufs) >> digestFilter(DigestAlgorithm::BLAKE2S_256) >> streamSink(os);
+    return os.buf();
+  } else if (keyName == SigningInfo::getDigestBlake3Identity()) {
+    OBufferStream os;
+    bufferSource(bufs) >> digestFilter(DigestAlgorithm::BLAKE3) >> streamSink(os);
     return os.buf();
   }
 

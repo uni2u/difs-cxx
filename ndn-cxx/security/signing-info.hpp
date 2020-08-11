@@ -71,8 +71,10 @@ public:
     SIGNER_TYPE_SHA256 = 4,
     /// Signer is a HMAC key.
     SIGNER_TYPE_HMAC = 5,
-    /// Use a Blake3 digest only, no signer needs to be specified.
+    /// Use a Blake2s digest only, no signer needs to be specified.
     SIGNER_TYPE_BLAKE2S = 6,
+    /// Use a Blake3 digest only, no signer needs to be specified.
+    SIGNER_TYPE_BLAKE3 = 7,
   };
 
 public:
@@ -299,6 +301,12 @@ public:
    */
   static const Name&
   getDigestBlake2sIdentity();
+
+  /**
+   * @brief A localhost identity to indicate that the signature is generated using Blake3.
+   */
+  static const Name&
+  getDigestBlake3Identity();
 
   /**
    * @brief A localhost identity to indicate that the signature is generated using an HMAC key.
