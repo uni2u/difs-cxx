@@ -189,10 +189,13 @@ def build(bld):
 
     libndn_cxx = dict(
         target='ndn-cxx',
-        source=bld.path.ant_glob('ndn-cxx/**/*.cpp',
-                                 excl=['ndn-cxx/**/*-osx.cpp',
-                                       'ndn-cxx/**/*netlink*.cpp',
-                                       'ndn-cxx/**/*-sqlite3.cpp']),
+        source=(
+            bld.path.ant_glob('ndn-cxx/**/*.cpp',
+                              excl=['ndn-cxx/**/*-osx.cpp',
+                                    'ndn-cxx/**/*netlink*.cpp',
+                                    'ndn-cxx/**/*-sqlite3.cpp']) +
+            bld.path.ant_glob('ndn-cxx/**/*.c')
+        ),
         features='pch',
         headers='ndn-cxx/impl/common-pch.hpp',
         use='ndn-cxx-mm-objects version BOOST OPENSSL SQLITE3 ATOMIC RT PTHREAD',

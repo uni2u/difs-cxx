@@ -36,22 +36,26 @@ public:
   void
   run()
   {
-    Name interestName("/example/testApp/randomData");
-    interestName.appendVersion();
+    for(uint64_t i = 0; i < 100000; i += 1) {
 
-    Interest interest(interestName);
-    interest.setCanBePrefix(false);
-    interest.setMustBeFresh(true);
-    interest.setInterestLifetime(6_s); // The default is 4 seconds
+      Name interestName("/example/testApp/randomData");
+      // interestName.appendVersion();
+      interestName.appendSegment(i);
 
-    std::cout << "Sending Interest " << interest << std::endl;
-    m_face.expressInterest(interest,
-                           bind(&Consumer::onData, this,  _1, _2),
-                           bind(&Consumer::onNack, this, _1, _2),
-                           bind(&Consumer::onTimeout, this, _1));
+      Interest interest(interestName);
+      interest.setCanBePrefix(false);
+      interest.setMustBeFresh(true);
+      interest.setInterestLifetime(6_s); // The default is 4 seconds
 
-    // processEvents will block until the requested data is received or a timeout occurs
-    m_face.processEvents();
+      std::cout << "Sending Interest " << interest << std::endl;
+      m_face.expressInterest(interest,
+          bind(&Consumer::onData, this,  _1, _2),
+          bind(&Consumer::onNack, this, _1, _2),
+          bind(&Consumer::onTimeout, this, _1));
+
+      // processEvents will block until the requested data is received or a timeout occurs
+      m_face.processEvents();
+    }
   }
 
 private:

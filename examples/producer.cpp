@@ -36,8 +36,9 @@ class Producer
 {
 public:
   void
-  run()
+  run(char type)
   {
+    this->type = type;
     m_face.setInterestFilter("/example/testApp",
                              bind(&Producer::onInterest, this, _1, _2),
                              nullptr, // RegisterPrefixSuccessCallback is optional
@@ -51,19 +52,45 @@ private:
   {
     std::cout << ">> I: " << interest << std::endl;
 
-    static const std::string content("Hello, world!");
+    // static const std::string content(
+    //   "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.");
+
+    static const char content[4096] = {0,};
 
     // Create Data packet
     auto data = make_shared<Data>(interest.getName());
     data->setFreshnessPeriod(10_s);
-    data->setContent(reinterpret_cast<const uint8_t*>(content.data()), content.size());
+    data->setContent(reinterpret_cast<const uint8_t*>(content), sizeof(content));
+
+    std::cout << "Type: " << type << std::endl;
 
     // Sign Data packet with default identity
-    m_keyChain.sign(*data);
+    switch(this->type) {
+    case 0:
+        m_keyChain.sign(*data);
+        break;
+    case 'b':
+        m_keyChain.sign(*data, signingWithBlake2s());
+        break;
+    case 'B':
+        m_keyChain.sign(*data, signingWithBlake3());
+        break;
+
+    case 's':
+        m_keyChain.sign(*data, signingWithSha256());
+        break;
+    default:
+        std::cerr << "Unknown type " << this->type << ". use bBs" << std::endl;
+        break;
+    }
     // m_keyChain.sign(*data, signingByIdentity(<identityName>));
     // m_keyChain.sign(*data, signingByKey(<keyName>));
     // m_keyChain.sign(*data, signingByCertificate(<certName>));
-    // m_keyChain.sign(*data, signingWithSha256());
+
+    // std::cout << "--------" << std::endl;
+    // std::cout << data->getSignatureValue() << std::endl;
+    // std::cout << data->getSignatureInfo() << std::endl;
+    // std::cout << "--------" << std::endl;
 
     // Return Data packet to the requester
     std::cout << "<< D: " << *data << std::endl;
@@ -81,6 +108,7 @@ private:
 private:
   Face m_face;
   KeyChain m_keyChain;
+  char type;
 };
 
 } // namespace examples
@@ -89,9 +117,13 @@ private:
 int
 main(int argc, char** argv)
 {
+  char type = '\0';
+  if (argc >= 2) {
+    type = argv[1][0];
+  }
   try {
     ndn::examples::Producer producer;
-    producer.run();
+    producer.run(type);
     return 0;
   }
   catch (const std::exception& e) {
