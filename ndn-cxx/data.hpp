@@ -30,6 +30,9 @@
 
 namespace ndn {
 
+ static const int HASH_COUNT = 5;
+ static const int HASH_SIZE = sizeof(uint8_t) * HASH_COUNT;
+
 class Signature;
 
 /** @brief Represents a %Data packet.
@@ -171,6 +174,25 @@ public: // Data fields
   getContent() const noexcept
   {
     return m_content;
+  }
+
+  const Block&
+  getRealContent() const noexcept
+  {
+    auto res = Block::fromBuffer(m_content.value(), m_content.value_size());
+    Block& block = std::get<1>(res);
+    return block;
+  }
+
+  const std::array<uint8_t, HASH_COUNT>
+  getHash() const
+  {
+    std::array<uint8_t, HASH_COUNT> hash;
+    for (int i = 0; i < HASH_COUNT; i += 1) {
+      hash[i] = m_content.value()[i];
+    }
+
+    return hash;
   }
 
   /**
