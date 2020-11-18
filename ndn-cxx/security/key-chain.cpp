@@ -41,6 +41,7 @@
 #include "ndn-cxx/security/transform/public-key.hpp"
 #include "ndn-cxx/security/transform/stream-sink.hpp"
 #include "ndn-cxx/security/transform/verifier-filter.hpp"
+#include "ndn-cxx/hash.hpp"
 
 #include <boost/lexical_cast.hpp>
 
@@ -466,6 +467,33 @@ KeyChain::sign(Data& data, const SigningInfo& params)
 
   Block sigValue(tlv::SignatureValue,
                  sign({{encoder.buf(), encoder.size()}}, keyName, params.getDigestAlgorithm()));
+
+  data.wireEncode(encoder, sigValue);
+}
+
+void
+KeyChain::sign(Data& data, const std::array<uint8_t, 5>& nextHash, const SigningInfo& params)
+{
+  Name keyName;
+  SignatureInfo sigInfo;
+  std::tie(keyName, sigInfo) = prepareSignatureInfo(params);
+
+  // Prepend hash to data
+  auto newBlockSize = data.getContent().value_size() + HASH_SIZE;
+  uint8_t* buffer = new uint8_t[newBlockSize];
+  memcpy(buffer, &nextHash, HASH_SIZE);
+  auto content = data.getContent();
+  memcpy(buffer + HASH_SIZE, content.value(), content.value_size());
+  data.setContent(buffer, newBlockSize);
+
+  data.setSignatureInfo(sigInfo);
+
+  EncodingBuffer encoder;
+  data.wireEncode(encoder, true);
+
+  Block sigValue(
+    tlv::SignatureValue,
+    sign({{encoder.buf(), encoder.size()}}, keyName, params.getDigestAlgorithm()));
 
   data.wireEncode(encoder, sigValue);
 }

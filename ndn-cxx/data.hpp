@@ -27,11 +27,9 @@
 #include "ndn-cxx/meta-info.hpp"
 #include "ndn-cxx/name.hpp"
 #include "ndn-cxx/signature-info.hpp"
+#include "ndn-cxx/hash.hpp"
 
 namespace ndn {
-
- static const int HASH_COUNT = 5;
- static const int HASH_SIZE = sizeof(uint8_t) * HASH_COUNT;
 
 class Signature;
 
