@@ -258,7 +258,7 @@ public: // signing
   sign(Data& data, const SigningInfo& params = SigningInfo());
 
   void
-  sign(Data& data, const std::array<uint8_t, 5>& nextHash, const SigningInfo& params = SigningInfo());
+  sign(Data& data, const Block& nextHash, const SigningInfo& params = SigningInfo());
 
   /**
    * @brief Sign an Interest according to the supplied signing information

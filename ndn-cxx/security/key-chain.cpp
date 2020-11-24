@@ -472,7 +472,7 @@ KeyChain::sign(Data& data, const SigningInfo& params)
 }
 
 void
-KeyChain::sign(Data& data, const std::array<uint8_t, 5>& nextHash, const SigningInfo& params)
+KeyChain::sign(Data& data, const ndn::Block& nextHash, const SigningInfo& params)
 {
   Name keyName;
   SignatureInfo sigInfo;
