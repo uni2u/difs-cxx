@@ -33,6 +33,9 @@
 
 #include <cmath>
 
+#include "ndn-cxx/hash-data.hpp"
+#include "ndn-cxx/hash-tlv.hpp"
+
 namespace ndn {
 namespace util {
 
@@ -272,14 +275,28 @@ SegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origInt
   // Remove from pending segments map
   m_pendingSegments.erase(pendingSegmentIt);
 
+  // Split content into hash and content
+
+  Data newData = data;
+
+  Block content = data.getContent();
+  if (content.type() == tlv::HashContent) {
+    HashContent hashContent;
+    hashContent.wireDecode(data.getContent());
+
+    // Check prev hash data matching current block's hash
+
+    newData.setContent(hashContent.getData());
+  }
+
   // Copy data in segment to temporary buffer
   auto receivedSegmentIt = m_segmentBuffer.emplace(std::piecewise_construct,
                                                    std::forward_as_tuple(currentSegment),
-                                                   std::forward_as_tuple(data.getContent().value_size()));
-  std::copy(data.getContent().value_begin(), data.getContent().value_end(),
+                                                   std::forward_as_tuple(newData.getContent().value_size()));
+  std::copy(newData.getContent().value_begin(), newData.getContent().value_end(),
             receivedSegmentIt.first->second.begin());
-  m_nBytesReceived += data.getContent().value_size();
-  afterSegmentValidated(data);
+  m_nBytesReceived += newData.getContent().value_size();
+  afterSegmentValidated(newData);
 
   if (data.getFinalBlock()) {
     if (!data.getFinalBlock()->isSegment()) {
