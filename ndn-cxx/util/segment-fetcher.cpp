@@ -278,13 +278,21 @@ SegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origInt
   // Split content into hash and content
 
   Data newData = data;
+  
+  ndn::Block currentHash = data.getSignatureValue();
+  
+  // compare currentHash vs nexthash
+  if (memcmp(currentHash.value(), nextHash.value(), currentHash.value_size()) != 0) {
+    // return false
+  }
 
   Block content = data.getContent();
   if (content.type() == tlv::HashContent) {
     HashContent hashContent;
     hashContent.wireDecode(data.getContent());
 
-    // Check prev hash data matching current block's hash
+    // TODO: Check prev hash data matching current block's hash
+    nextHash = hashContent.getHash();
 
     newData.setContent(hashContent.getData());
   }
