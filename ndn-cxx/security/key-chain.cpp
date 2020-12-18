@@ -42,7 +42,7 @@
 #include "ndn-cxx/security/transform/stream-sink.hpp"
 #include "ndn-cxx/security/transform/verifier-filter.hpp"
 #include "ndn-cxx/hash.hpp"
-#include "ndn-cxx/hash-data.hpp"
+#include "ndn-cxx/hash-tlv.hpp"
 
 #include <boost/lexical_cast.hpp>
 
@@ -480,9 +480,9 @@ KeyChain::sign(Data& data, const ndn::Block& nextHash, const SigningInfo& params
   std::tie(keyName, sigInfo) = prepareSignatureInfo(params);
   
   // Prepend hash to hash content block
-  HashContent block;
-  block.setHash(nextHash);
-  block.setData(data.getContent());
+  Block block = Block(tlv::HashContent);
+  block.push_back(nextHash);
+  block.push_back(data.getContent());
   data.setContent(block);
 
   data.setSignatureInfo(sigInfo);

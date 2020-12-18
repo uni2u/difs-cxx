@@ -288,13 +288,13 @@ SegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origInt
 
   Block content = data.getContent();
   if (content.type() == tlv::HashContent) {
-    HashContent hashContent;
-    hashContent.wireDecode(data.getContent());
+    // HashContent hashContent;
+    // hashContent.wireDecode(data.getContent());
 
     // TODO: Check prev hash data matching current block's hash
-    nextHash = hashContent.getHash();
+    // nextHash = hashContent.getHash();
 
-    newData.setContent(hashContent.getData());
+    // newData.setContent(hashContent.getData());
   }
 
   // Copy data in segment to temporary buffer
