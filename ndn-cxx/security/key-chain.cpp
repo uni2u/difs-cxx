@@ -480,9 +480,9 @@ KeyChain::sign(Data& data, const ndn::Block& nextHash, const SigningInfo& params
   std::tie(keyName, sigInfo) = prepareSignatureInfo(params);
   
   // Prepend hash to hash content block
-  Block block = Block(tlv::HashContent);
-  block.push_back(nextHash);
+  Block block = Block(tlv::Content);
   block.push_back(data.getContent());
+  block.push_back(nextHash);
   data.setContent(block);
 
   data.setSignatureInfo(sigInfo);
