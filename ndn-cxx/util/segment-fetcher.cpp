@@ -33,7 +33,7 @@
 
 #include <cmath>
 
-#include "ndn-cxx/hash-data.hpp"
+//#include "ndn-cxx/hash-data.hpp"
 #include "ndn-cxx/hash-tlv.hpp"
 
 namespace ndn {
