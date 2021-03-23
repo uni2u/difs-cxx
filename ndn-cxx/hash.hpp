@@ -1,7 +1,6 @@
 #ifndef NDN_CXX_HASH_HPP
 #define NDN_CXX_HASH_HPP
 namespace ndn {
- static const int HASH_COUNT = 5;
- static const int HASH_SIZE = sizeof(uint8_t) * HASH_COUNT;
+ static const size_t HASH_SIZE = 32;
 }
 #endif // NDN_CXX_HASH_HPP

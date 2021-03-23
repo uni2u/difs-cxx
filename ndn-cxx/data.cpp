@@ -19,6 +19,8 @@
  * See AUTHORS.md for complete list of ndn-cxx authors and contributors.
  */
 
+#include <iostream>
+
 #include "ndn-cxx/data.hpp"
 #include "ndn-cxx/signature.hpp"
 #include "ndn-cxx/util/sha256.hpp"
@@ -289,6 +291,13 @@ Data::unsetContent()
   m_content = {};
   resetWire();
   return *this;
+}
+
+const Block
+Data::getRealContent() const
+{
+  auto newContent = makeBinaryBlock(tlv::Content, m_content.value()+HASH_SIZE, m_content.value_size()-HASH_SIZE);
+  return newContent;
 }
 
 Signature
