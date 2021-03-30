@@ -174,19 +174,14 @@ public: // Data fields
     return m_content;
   }
 
-  const Block&
-  getRealContent() const noexcept
-  {
-    auto res = Block::fromBuffer(m_content.value(), m_content.value_size());
-    Block& block = std::get<1>(res);
-    return block;
-  }
+  const Block
+  getRealContent() const;
 
-  const std::array<uint8_t, HASH_COUNT>
+  const std::array<uint8_t, HASH_SIZE>
   getHash() const
   {
-    std::array<uint8_t, HASH_COUNT> hash;
-    for (int i = 0; i < HASH_COUNT; i += 1) {
+    std::array<uint8_t, HASH_SIZE> hash;
+    for (size_t i = 0; i < HASH_SIZE; i += 1) {
       hash[i] = m_content.value()[i];
     }
 

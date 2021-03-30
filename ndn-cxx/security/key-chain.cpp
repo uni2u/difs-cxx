@@ -19,6 +19,9 @@
  * See AUTHORS.md for complete list of ndn-cxx authors and contributors.
  */
 
+#include <iostream>
+#include <algorithm>
+
 #include "ndn-cxx/security/key-chain.hpp"
 
 #include "ndn-cxx/encoding/buffer-stream.hpp"
@@ -42,7 +45,6 @@
 #include "ndn-cxx/security/transform/stream-sink.hpp"
 #include "ndn-cxx/security/transform/verifier-filter.hpp"
 #include "ndn-cxx/hash.hpp"
-#include "ndn-cxx/hash-tlv.hpp"
 
 #include <boost/lexical_cast.hpp>
 
@@ -475,29 +477,19 @@ KeyChain::sign(Data& data, const SigningInfo& params)
 void
 KeyChain::sign(Data& data, const ndn::Block& nextHash, const SigningInfo& params)
 {
-  Name keyName;
-  SignatureInfo sigInfo;
-  std::tie(keyName, sigInfo) = prepareSignatureInfo(params);
-
-  if (nextHash.value_size() > 0)
-  {
-    // Prepend hash to hash content block
-    Block block = Block(tlv::Content);
-    block.push_back(nextHash);
-    block.push_back(data.getContent());
-    data.setContent(block);
-  }
-
-  data.setSignatureInfo(sigInfo);
-
-  EncodingBuffer encoder;
-  data.wireEncode(encoder, true);
-
-  Block sigValue(
-    tlv::SignatureValue,
-    sign({{encoder.buf(), encoder.size()}}, keyName, params.getDigestAlgorithm()));
-
-  data.wireEncode(encoder, sigValue);
+  auto content = data.getContent();
+  size_t newContentSize = HASH_SIZE + content.value_size();
+  uint8_t *newContent = new uint8_t[newContentSize];
+  
+  // Prepend hash to hash
+  memcpy(newContent, nextHash.value(), std::min(HASH_SIZE, nextHash.value_size()));
+  // Append real content
+  memcpy(newContent+HASH_SIZE, content.value(), content.value_size());
+  data.setContent(newContent, newContentSize);
+  
+  delete[] newContent;
+  
+  sign(data, params);
 }
 
 void
