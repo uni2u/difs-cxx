@@ -19,47 +19,24 @@
  * See AUTHORS.md for complete list of ndn-cxx authors and contributors.
  */
 
-#include "tests/make-interest-data.hpp"
+#ifndef NDN_CXX_UTIL_SCOPE_HPP
+#define NDN_CXX_UTIL_SCOPE_HPP
+
+#define scope_CONFIG_SELECT_SCOPE scope_SCOPE_NONSTD
+#include "ndn-cxx/util/nonstd/scope-lite.hpp"
 
 namespace ndn {
-namespace tests {
 
-shared_ptr<Interest>
-makeInterest(const Name& name, bool canBePrefix, optional<time::milliseconds> lifetime,
-             optional<Interest::Nonce> nonce)
-{
-  auto interest = std::make_shared<Interest>(name);
-  interest->setCanBePrefix(canBePrefix);
-  if (lifetime) {
-    interest->setInterestLifetime(*lifetime);
-  }
-  interest->setNonce(nonce);
-  return interest;
-}
+using ::nonstd::scope_exit;
+using ::nonstd::scope_fail;
+using ::nonstd::scope_success;
+using ::nonstd::unique_resource;
 
-shared_ptr<Data>
-makeData(const Name& name)
-{
-  auto data = std::make_shared<Data>(name);
-  return signData(data);
-}
+using ::nonstd::make_scope_exit;
+using ::nonstd::make_scope_fail;
+using ::nonstd::make_scope_success;
+using ::nonstd::make_unique_resource_checked;
 
-Data&
-signData(Data& data)
-{
-  data.setSignatureInfo(SignatureInfo(tlv::NullSignature));
-  data.setSignatureValue(std::make_shared<Buffer>());
-  data.wireEncode();
-  return data;
-}
-
-lp::Nack
-makeNack(Interest interest, lp::NackReason reason)
-{
-  lp::Nack nack(std::move(interest));
-  nack.setReason(reason);
-  return nack;
-}
-
-} // namespace tests
 } // namespace ndn
+
+#endif // NDN_CXX_UTIL_SCOPE_HPP
