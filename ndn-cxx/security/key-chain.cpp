@@ -475,24 +475,6 @@ KeyChain::sign(Data& data, const SigningInfo& params)
 }
 
 void
-KeyChain::sign(Data& data, const ndn::Block& nextHash, const SigningInfo& params)
-{
-  auto content = data.getContent();
-  size_t newContentSize = HASH_SIZE + content.value_size();
-  uint8_t *newContent = new uint8_t[newContentSize];
-  
-  // Prepend hash to hash
-  memcpy(newContent, nextHash.value(), std::min(HASH_SIZE, nextHash.value_size()));
-  // Append real content
-  memcpy(newContent+HASH_SIZE, content.value(), content.value_size());
-  data.setContent(newContent, newContentSize);
-  
-  delete[] newContent;
-  
-  sign(data, params);
-}
-
-void
 KeyChain::sign(Interest& interest, const SigningInfo& params)
 {
   Name keyName;

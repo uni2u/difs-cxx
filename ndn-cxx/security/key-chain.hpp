@@ -257,9 +257,6 @@ public: // signing
   void
   sign(Data& data, const SigningInfo& params = SigningInfo());
 
-  void
-  sign(Data& data, const ndn::Block& nextHash, const SigningInfo& params = SigningInfo());
-
   /**
    * @brief Sign an Interest according to the supplied signing information
    *
