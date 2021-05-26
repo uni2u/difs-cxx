@@ -1,5 +1,6 @@
 #include <ndn-cxx/util/hc-segment-fetcher.hpp>
 #include <iostream>
+#include <unistd.h>
 
 namespace ndn {
 namespace util {
@@ -17,7 +18,6 @@ HCSegmentFetcher::start(Face &face,
   shared_ptr<HCSegmentFetcher> hc_fetcher(new HCSegmentFetcher(face, validator, options));
 
   auto m_fetcher = SegmentFetcher::start(face, baseInterest, validator, options);
-
   m_fetcher->onComplete.connect([hc_fetcher] (const ConstBufferPtr& buffer)
                                          { hc_fetcher->onComplete(buffer);
                                          });
@@ -39,7 +39,7 @@ HCSegmentFetcher::start(Face &face,
                                          });
 
   m_fetcher->afterSegmentValidated.connect([hc_fetcher] (const Data& data)
-                                         { hc_fetcher->afterValidationSuccess(data);
+                                         { hc_fetcher->randAfterValidationSuccess(data);
                                          });
 
   m_fetcher->afterSegmentTimedOut.connect([hc_fetcher] ()
@@ -96,6 +96,40 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data) {
   } else {
     afterSegmentValidated(data);
   }
+}
+
+void 
+HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
+  auto content = data.getContent();
+  content.parse();
+
+  int segment = data.getName().get(-1).toSegment();
+
+  if (segment != 0) {
+    if (segment - 1 == before_segment) {
+      if(memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size())) {
+        onError(HASHCHAIN_ERROR, "Failure hash key error");
+      } else {
+        success_count++;
+        afterSegmentValidated(data);
+      }
+    } else {
+      afterSegmentValidated(data);
+    }
+  } else {
+    success_count++;
+    afterSegmentValidated(data);
+  }
+
+  int finalBlockId = data.getFinalBlock().value().toSegment();
+  if (segment == finalBlockId) {
+    if (success_count < finalBlockId / 2) {
+      onError(HASHCHAIN_ERROR, "Failure hash key error");
+    }
+  }
+
+  before_segment = segment;
+  before_signature = std::make_shared<Block>(content.get(tlv::SignatureValue));
 }
 
 void
