@@ -2,9 +2,11 @@
 #include <iostream>
 #include <unistd.h>
 
+#include "ndn-cxx/util/logger.hpp"
+
 namespace ndn {
 namespace util {
-
+NDN_LOG_INIT(ndn.util.HCSegmentFetcher);
 HCSegmentFetcher::HCSegmentFetcher(Face& face, security::v2::Validator& validator, const SegmentFetcher::Options& options) {
 
 }
@@ -57,6 +59,7 @@ HCSegmentFetcher::start(Face &face,
 
 void
 HCSegmentFetcher::afterValidationSuccess(const Data& data) {
+  NDN_LOG_DEBUG("HCSegmentFetcher::afterValidationSuccess");
   int segment_no = data.getName().get(-1).toSegment();
   auto content = data.getContent();
   content.parse();
@@ -100,6 +103,7 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data) {
 
 void 
 HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
+  NDN_LOG_DEBUG("HCSegmentFetcher::randAfterValidationSuccess");
   auto content = data.getContent();
   content.parse();
 
