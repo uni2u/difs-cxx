@@ -55,54 +55,51 @@ HCSegmentFetcher::start(Face &face,
   return hc_fetcher;
 }
 
-void
-HCSegmentFetcher::afterValidationSuccess(const Data& data) {
-  int segment_no = data.getName().get(-1).toSegment();
-  auto content = data.getContent();
-  content.parse();
+// void
+// HCSegmentFetcher::afterValidationSuccess(const Data& data) {
+//   int segment_no = data.getName().get(-1).toSegment();
+//   auto content = data.getContent();
+//   content.parse();
 
-  if(data_map.size() != 0 && data_map.find(segment_no+1)->second != 0) {
-    auto cData = data_map.find(segment_no+1)->second;
-    auto m_content = cData->getContent();
-    m_content.parse();
-    auto hash_block = m_content.get(tlv::SignatureValue);
-    if (memcmp((void*)content.get(tlv::SignatureValue).value(), (void*)hash_block.value(), data.getSignatureValue().value_size())) {
-      onError(HASHCHAIN_ERROR, "Failure hash key error");
-    } else {
-      data_map.erase(segment_no+1);
-      afterSegmentValidated(data);
-    }
-  } else {
-    for (auto iter = content.elements_begin(); iter != content.elements_end(); iter++) {
-      if(iter->type() == tlv::SignatureValue) {
-        auto signature_block = iter.base();
-        std::shared_ptr<Block> block = std::make_shared<Block>(*signature_block); 
-        nextHash_map.insert(std::pair<int, std::shared_ptr<Block>>(segment_no, block));
-      }
-    }
-  }
+//   if(data_map.size() != 0 && data_map.find(segment_no+1)->second != 0) {
+//     auto cData = data_map.find(segment_no+1)->second;
+//     auto m_content = cData->getContent();
+//     m_content.parse();
+//     auto hash_block = m_content.get(tlv::SignatureValue);
+//     if (memcmp((void*)content.get(tlv::SignatureValue).value(), (void*)hash_block.value(), data.getSignatureValue().value_size())) {
+//       onError(HASHCHAIN_ERROR, "Failure hash key error");
+//     } else {
+//       data_map.erase(segment_no+1);
+//       afterSegmentValidated(data);
+//     }
+//   } else {
+//     for (auto iter = content.elements_begin(); iter != content.elements_end(); iter++) {
+//       if(iter->type() == tlv::SignatureValue) {
+//         auto signature_block = iter.base();
+//         std::shared_ptr<Block> block = std::make_shared<Block>(*signature_block); 
+//         nextHash_map.insert(std::pair<int, std::shared_ptr<Block>>(segment_no, block));
+//       }
+//     }
+//   }
 
-  if(segment_no != 0){
-    auto hash_block = nextHash_map.find(segment_no-1)->second;
-    if(hash_block == 0) {
-      std::shared_ptr<Data> m_data = std::make_shared<Data>(data); 
-      data_map.insert(std::pair<int, std::shared_ptr<Data>>(segment_no, m_data));
-    } else if (memcmp((void*)data.getSignatureValue().value(), (void*)hash_block->value(), data.getSignatureValue().value_size())) {
-      onError(HASHCHAIN_ERROR, "Failure hash key error");
-    } else {
-      data_map.erase(segment_no-1);
-      afterSegmentValidated(data);
-    }
-  } else {
-    afterSegmentValidated(data);
-  }
-}
+//   if(segment_no != 0){
+//     auto hash_block = nextHash_map.find(segment_no-1)->second;
+//     if(hash_block == 0) {
+//       std::shared_ptr<Data> m_data = std::make_shared<Data>(data); 
+//       data_map.insert(std::pair<int, std::shared_ptr<Data>>(segment_no, m_data));
+//     } else if (memcmp((void*)data.getSignatureValue().value(), (void*)hash_block->value(), data.getSignatureValue().value_size())) {
+//       onError(HASHCHAIN_ERROR, "Failure hash key error");
+//     } else {
+//       data_map.erase(segment_no-1);
+//       afterSegmentValidated(data);
+//     }
+//   } else {
+//     afterSegmentValidated(data);
+//   }
+// }
 
 void 
 HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
-  auto content = data.getContent();
-  content.parse();
-
   int segment = data.getName().get(-1).toSegment();
 
   if (segment != 0) {
@@ -129,7 +126,7 @@ HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
   }
 
   before_segment = segment;
-  before_signature = std::make_shared<Block>(content.get(tlv::SignatureValue));
+  before_signature = std::make_shared<Block>(data.getMetaInfo().getAppMetaInfo().front());
 }
 
 void

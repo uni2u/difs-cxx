@@ -37,12 +37,10 @@ namespace security {
 inline namespace v2{
 void
 HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &params) {
-  auto content = data.getContent();
-  ndn::Block realcontent = ndn::encoding::makeBinaryBlock(ndn::tlv::Content, content.value(), content.value_size());
-  content.resetWire();
-  content.push_back(realcontent);
-  content.push_back(nextHash);
-  data.setContent(content);
+  auto metaInfo = data.getMetaInfo();
+  metaInfo.addAppMetaInfo(nextHash);
+
+  data.setMetaInfo(metaInfo);
 
   KeyChain::sign(data, params);
 }
