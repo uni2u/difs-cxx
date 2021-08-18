@@ -293,13 +293,6 @@ Data::unsetContent()
   return *this;
 }
 
-const Block
-Data::getRealContent() const
-{
-  auto newContent = makeBinaryBlock(tlv::Content, m_content.value()+HASH_SIZE, m_content.value_size()-HASH_SIZE);
-  return newContent;
-}
-
 Signature
 Data::getSignature() const
 {

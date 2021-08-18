@@ -28,7 +28,6 @@
 #include "ndn-cxx/name.hpp"
 #include "ndn-cxx/security/security-common.hpp"
 #include "ndn-cxx/signature-info.hpp"
-#include "ndn-cxx/hash.hpp"
 
 namespace ndn {
 
@@ -173,20 +172,6 @@ public: // Data fields
   getContent() const noexcept
   {
     return m_content;
-  }
-
-  const Block
-  getRealContent() const;
-
-  const std::array<uint8_t, HASH_SIZE>
-  getHash() const
-  {
-    std::array<uint8_t, HASH_SIZE> hash;
-    for (size_t i = 0; i < HASH_SIZE; i += 1) {
-      hash[i] = m_content.value()[i];
-    }
-
-    return hash;
   }
 
   /**

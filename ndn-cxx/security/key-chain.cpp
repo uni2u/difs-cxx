@@ -44,7 +44,6 @@
 #include "ndn-cxx/security/transform/public-key.hpp"
 #include "ndn-cxx/security/transform/stream-sink.hpp"
 #include "ndn-cxx/security/transform/verifier-filter.hpp"
-#include "ndn-cxx/hash.hpp"
 
 #include <boost/lexical_cast.hpp>
 
