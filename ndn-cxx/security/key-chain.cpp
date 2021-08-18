@@ -19,9 +19,6 @@
  * See AUTHORS.md for complete list of ndn-cxx authors and contributors.
  */
 
-#include <iostream>
-#include <algorithm>
-
 #include "ndn-cxx/security/key-chain.hpp"
 
 #include "ndn-cxx/encoding/buffer-stream.hpp"
@@ -44,7 +41,6 @@
 #include "ndn-cxx/security/transform/public-key.hpp"
 #include "ndn-cxx/security/transform/stream-sink.hpp"
 #include "ndn-cxx/security/transform/verifier-filter.hpp"
-#include "ndn-cxx/hash.hpp"
 
 #include <boost/lexical_cast.hpp>
 
@@ -689,16 +685,6 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
       return std::make_tuple(keyName, sigInfo);
     }
-    case SigningInfo::SIGNER_TYPE_BLAKE2S: {
-      sigInfo.setSignatureType(tlv::DigestBlake2s);
-      NDN_LOG_TRACE("Prepared signature info: "<< sigInfo);
-      return std::make_tuple(SigningInfo::getDigestBlake2sIdentity(), sigInfo);
-    }
-    case SigningInfo::SIGNER_TYPE_BLAKE3: {
-      sigInfo.setSignatureType(tlv::DigestBlake3);
-      NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
-      return std::make_tuple(SigningInfo::getDigestBlake3Identity(), sigInfo);
-    }
     default: {
       NDN_THROW(InvalidSigningInfoError("Unrecognized signer type " +
                                         boost::lexical_cast<std::string>(params.getSignerType())));
@@ -735,14 +721,6 @@ KeyChain::sign(const InputBuffers& bufs, const Name& keyName, DigestAlgorithm di
   if (keyName == SigningInfo::getDigestSha256Identity()) {
     OBufferStream os;
     bufferSource(bufs) >> digestFilter(DigestAlgorithm::SHA256) >> streamSink(os);
-    return os.buf();
-  } else if (keyName == SigningInfo::getDigestBlake2sIdentity()) {
-    OBufferStream os;
-    bufferSource(bufs) >> digestFilter(DigestAlgorithm::BLAKE2S_256) >> streamSink(os);
-    return os.buf();
-  } else if (keyName == SigningInfo::getDigestBlake3Identity()) {
-    OBufferStream os;
-    bufferSource(bufs) >> digestFilter(DigestAlgorithm::BLAKE3) >> streamSink(os);
     return os.buf();
   }
 

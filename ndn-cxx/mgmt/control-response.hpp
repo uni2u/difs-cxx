@@ -40,8 +40,6 @@ public:
 
   ControlResponse();
 
-  virtual ~ControlResponse() {}
-
   ControlResponse(uint32_t code, const std::string& text);
 
   explicit
@@ -65,7 +63,7 @@ public:
   ControlResponse&
   setBody(const Block& body);
 
-  virtual const Block&
+  const Block&
   wireEncode() const;
 
   void

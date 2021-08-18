@@ -331,8 +331,6 @@ NDN_CXX_PUBLIC_WITH_TESTS_ELSE_PRIVATE:
   std::map<uint64_t, Buffer> m_segmentBuffer;
   std::map<uint64_t, PendingSegment> m_pendingSegments;
   std::set<uint64_t> m_receivedSegments;
-  
-  ndn::Block nextHash;
 };
 
 } // namespace util
