@@ -19,8 +19,6 @@
  * See AUTHORS.md for complete list of ndn-cxx authors and contributors.
  */
 
-#include <iostream>
-
 #include "ndn-cxx/data.hpp"
 #include "ndn-cxx/signature.hpp"
 #include "ndn-cxx/util/sha256.hpp"
