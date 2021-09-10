@@ -460,8 +460,13 @@ KeyChain::sign(Data& data, const SigningInfo& params)
 {
   Name keyName;
   SignatureInfo sigInfo;
+
   std::tie(keyName, sigInfo) = prepareSignatureInfo(params);
 
+  if(data.getSignatureInfo().hasNextHash()) {
+    std::cout<<"params.getSignatureInfo().hasNextHash()"<<std::endl;
+    sigInfo.setNextHash(data.getSignatureInfo().getNextHash());
+  }
   data.setSignatureInfo(sigInfo);
 
   EncodingBuffer encoder;
@@ -698,6 +703,13 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
       return std::make_tuple(SigningInfo::getDigestBlake3Identity(), sigInfo);
     }
+    case SigningInfo::SIGNER_TYPE_HASHCHAIN_SHA256: {
+      //sigInfo.setNextHash(params.getSignatureInfo().getNextHash());
+      sigInfo.setSignatureType(tlv::SignatureHashChainWithSha256);
+      // sigInfo.setSignatureType(tlv::DigestSha256);
+      NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
+      return std::make_tuple(SigningInfo::getDigestHashChainWithSha256Identity(), sigInfo);
+    }
     default: {
       NDN_THROW(InvalidSigningInfoError("Unrecognized signer type " +
                                         boost::lexical_cast<std::string>(params.getSignerType())));
@@ -742,6 +754,10 @@ KeyChain::sign(const InputBuffers& bufs, const Name& keyName, DigestAlgorithm di
   } else if (keyName == SigningInfo::getDigestBlake3Identity()) {
     OBufferStream os;
     bufferSource(bufs) >> digestFilter(DigestAlgorithm::BLAKE3) >> streamSink(os);
+    return os.buf();
+  } else if (keyName == SigningInfo::getDigestHashChainWithSha256Identity()) {
+    OBufferStream os;
+    bufferSource(bufs) >> digestFilter(DigestAlgorithm::SHA256) >> streamSink(os);
     return os.buf();
   }
 

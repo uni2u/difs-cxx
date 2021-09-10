@@ -129,11 +129,40 @@ public: // field access
     return m_keyLocator.has_value();
   }
 
+  /** @brief Check if NextHash is present
+   */
+  bool
+  hasNextHash() const noexcept
+  {
+    
+    return !m_otherTlvs.empty();
+  }
+
   /** @brief Get KeyLocator
    *  @throw Error This SignatureInfo does not contain a KeyLocator
    */
   const KeyLocator&
   getKeyLocator() const;
+
+  /** @brief Set KeyLocator
+   *  @return A reference to this SignatureInfo, to allow chaining
+   *
+   *  Passing `nullopt` will remove the KeyLocator.
+   */
+
+    /** @brief Get nextHash
+   *  @throw Error This SignatureInfo does not contain a nextHash
+   */
+  optional<Block>
+  getNextHash() const;
+
+  /** @brief Set nexthash
+   *  @return A reference to this SignatureInfo, to allow chaining
+   *
+   *  Passing `nullopt` will remove the KeyLocator.
+   */
+  SignatureInfo&
+  setNextHash(optional<Block> nextHash);
 
   /** @brief Set KeyLocator
    *  @return A reference to this SignatureInfo, to allow chaining
@@ -256,6 +285,7 @@ private:
 private:
   int32_t m_type = -1;
   optional<KeyLocator> m_keyLocator;
+  //optional<Block> m_nextHash;
   std::vector<Block> m_otherTlvs;
 
   mutable Block m_wire;

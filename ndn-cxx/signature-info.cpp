@@ -25,6 +25,7 @@
 #include "ndn-cxx/util/string-helper.hpp"
 
 #include <boost/range/adaptor/reversed.hpp>
+#include <iostream>
 
 namespace ndn {
 
@@ -61,6 +62,7 @@ SignatureInfo::wireEncode(EncodingImpl<TAG>& encoder, SignatureInfo::Type type) 
   //                   [KeyLocator]
   //                   [ValidityPeriod]
   //                   *OtherSubelements
+  //                   [NextHash]
 
   // InterestSignatureInfo = INTEREST-SIGNATURE-INFO-TYPE TLV-LENGTH
   //                           SignatureType
@@ -146,6 +148,10 @@ SignatureInfo::wireDecode(const Block& wire, SignatureInfo::Type type)
         lastCriticalElement = 2;
         break;
       }
+      case tlv::NextHashValue: {
+        m_otherTlvs.push_back(element);
+        break;
+      }
       case tlv::SignatureNonce: {
         // Must handle SignatureNonce specifically because we must check that its length is >0
         if (element.value_size() < 1) {
@@ -202,6 +208,42 @@ SignatureInfo::setKeyLocator(optional<KeyLocator> keyLocator)
     m_keyLocator = std::move(keyLocator);
     m_wire.reset();
   }
+  return *this;
+}
+
+optional<Block>
+SignatureInfo::getNextHash() const
+{
+  std::cout<<"getNexthash started..."<< std::endl;
+  auto it = findOtherTlv(tlv::NextHashValue);
+  std::cout<<"getNexthash after findOtherTLv..."<< std::endl;
+  if(it == m_otherTlvs.end()) {
+    std::cout<<"getNextHash none"<<std::endl;
+    return nullopt;
+  }
+  // if (it->size() <= 2) {
+  //   std::cout<<"getNextHash size 2"<<std::endl;
+  //   return nullopt;
+  // }
+  std::cout<<"getNextHash successful"<<std::endl;
+  return static_cast<Block>(*it);
+}
+
+SignatureInfo&
+SignatureInfo::setNextHash(optional<Block> nextHash)
+{
+  if(!nextHash) {
+    removeCustomTlv(tlv::NextHashValue);
+  }
+  std::cout<<"m_otherTlvs size before:"<<m_otherTlvs.size()<<std::endl;
+  if(nextHash == nullopt) {
+    std::cout<<"setNextHash none"<<std::endl;
+    return *this;
+  }
+  std::cout<<"setNextHash found: "<<nextHash.has_value()<<std::endl;
+  //nextHash.value().resetWire();
+  addCustomTlv(nextHash.value());
+
   return *this;
 }
 
@@ -274,12 +316,15 @@ SignatureInfo::getTime() const
 SignatureInfo&
 SignatureInfo::setTime(optional<time::system_clock::time_point> time)
 {
+  std::cout<<"removeCustomTlv none"<<std::endl;
   if (!time) {
     removeCustomTlv(tlv::SignatureTime);
   }
   else {
+    std::cout<<"addCustomTlv none"<<std::endl;
     addCustomTlv(makeNonNegativeIntegerBlock(tlv::SignatureTime, time::toUnixTimestamp(*time).count()));
   }
+  std::cout<<"return none"<<std::endl;
   return *this;
 }
 
@@ -360,6 +405,7 @@ SignatureInfo::appendTypeSpecificTlv(const Block& block)
   addCustomTlv(block);
 }
 
+
 std::vector<Block>::const_iterator
 SignatureInfo::findOtherTlv(uint32_t type) const
 {
@@ -404,6 +450,13 @@ operator<<(std::ostream& os, const SignatureInfo& info)
         case tlv::SignatureSeqNum:
           os << "SeqNum=" << *info.getSeqNum() << " ";
           break;
+        case tlv::NextHashValue: {
+          os << "NextHash=";
+          optional<Block> nextHash = info.getNextHash();
+          printHex(os, nextHash.value().value(), nextHash.value().value_size(), false);
+          os << " ";
+          break;
+        }
         case tlv::ValidityPeriod:
           os << "ValidityPeriod=" << info.getValidityPeriod() << " ";
           break;

@@ -52,6 +52,13 @@ SigningInfo::getDigestSha256Identity()
 }
 
 const Name&
+SigningInfo::getDigestHashChainWithSha256Identity()
+{
+  static Name digestHashChainWithSha256Identity("/localhost/identity/digest-hashchain-with-sha256");
+  return digestHashChainWithSha256Identity;
+}
+
+const Name&
 SigningInfo::getDigestBlake2sIdentity()
 {
   static Name digestBlake2sIdentity("/localhost/identity/digest-blake2s");
@@ -81,7 +88,8 @@ SigningInfo::SigningInfo(SignerType signerType,
   , m_info(signatureInfo)
   , m_signedInterestFormat(SignedInterestFormat::V02)
 {
-  BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_BLAKE3);
+   BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_HASHCHAIN_SHA256);
+  // BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_BLAKE3);
 }
 
 SigningInfo::SigningInfo(const Identity& identity)

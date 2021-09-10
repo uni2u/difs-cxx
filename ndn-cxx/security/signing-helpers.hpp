@@ -71,6 +71,12 @@ SigningInfo
 signingWithSha256();
 
 /**
+ * \return a SigningInfo for signing with HC Sha256
+ */
+SigningInfo
+signingWithHashChainSha256();
+
+/**
  * \return a SigningInfo for signing with Blake2s
  */
 SigningInfo
@@ -90,6 +96,7 @@ using security::signingByCertificate;
 using security::signingWithSha256;
 using security::signingWithBlake2s;
 using security::signingWithBlake3;
+using security::signingWithHashChainSha256;
 
 } // namespace ndn
 

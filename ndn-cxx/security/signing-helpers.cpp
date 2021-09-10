@@ -67,6 +67,18 @@ signingWithSha256()
 }
 
 SigningInfo
+signingWithHashChainSha256()
+{
+  return SigningInfo(SigningInfo::SIGNER_TYPE_HASHCHAIN_SHA256);
+}
+
+// SigningInfo
+// signingWithHashCHainWithSha256()
+// {
+//   return SigningInfo(SigningInfo::get);
+// }
+
+SigningInfo
 signingWithBlake2s()
 {
   return SigningInfo(SigningInfo::SIGNER_TYPE_BLAKE2S);

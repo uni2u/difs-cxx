@@ -75,6 +75,8 @@ public:
     SIGNER_TYPE_BLAKE2S = 6,
     /// Use a Blake3 digest only, no signer needs to be specified.
     SIGNER_TYPE_BLAKE3 = 7,
+
+    SIGNER_TYPE_HASHCHAIN_SHA256 = 10,
   };
 
 public:
@@ -295,6 +297,13 @@ public:
    */
   static const Name&
   getDigestSha256Identity();
+
+
+    /**
+   * @brief A localhost identity to indicate that the signature is generated using HC with SHA-256.
+   */
+  static const Name&
+  getDigestHashChainWithSha256Identity();
 
   /**
    * @brief A localhost identity to indicate that the signature is generated using Blake3.
