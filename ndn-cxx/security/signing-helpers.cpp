@@ -31,6 +31,18 @@ signingByIdentity(const Name& identityName)
 }
 
 SigningInfo
+signingByHashChainIdentity(const Name& identityName)
+{
+  return SigningInfo(SigningInfo::SIGNER_TYPE_HASHCHAIN_ID, identityName);
+}
+
+SigningInfo
+signingByHashChainIdentity(const Identity& identity)
+{
+  return SigningInfo(identity);
+}
+
+SigningInfo
 signingByIdentity(const Identity& identity)
 {
   return SigningInfo(identity);

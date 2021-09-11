@@ -77,6 +77,9 @@ public:
     SIGNER_TYPE_BLAKE3 = 7,
 
     SIGNER_TYPE_HASHCHAIN_SHA256 = 10,
+
+    SIGNER_TYPE_HASHCHAIN_ID = 11,
+
   };
 
 public:
@@ -128,6 +131,13 @@ public:
    */
   SigningInfo&
   setSigningIdentity(const Name& identity);
+
+    /**
+   * @brief Set signer as an hashChainIdentity with name @p identity
+   * @post Change the signerType to SIGNER_TYPE_HASHCHAIN_ID
+   */
+  SigningInfo&
+  setSigningHashChainIdentity(const Name& identity);
 
   /**
    * @brief Set signer as a key with name @p keyName

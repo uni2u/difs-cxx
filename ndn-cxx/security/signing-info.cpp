@@ -127,6 +127,9 @@ SigningInfo::SigningInfo(const std::string& signingStr)
       setSigningIdentity(nameArg);
     }
   }
+   else if (scheme == "hash") {
+    setSigningIdentity(nameArg);
+  } 
   else if (scheme == "key") {
     setSigningKeyName(nameArg);
   }
@@ -146,6 +149,15 @@ SigningInfo&
 SigningInfo::setSigningIdentity(const Name& identity)
 {
   m_type = SIGNER_TYPE_ID;
+  m_name = identity;
+  m_identity = Identity();
+  return *this;
+}
+
+SigningInfo&
+SigningInfo::setSigningHashChainIdentity(const Name& identity)
+{
+  m_type = SIGNER_TYPE_HASHCHAIN_ID;
   m_name = identity;
   m_identity = Identity();
   return *this;
@@ -228,6 +240,8 @@ operator<<(std::ostream& os, const SigningInfo& si)
       return os;
     case SigningInfo::SIGNER_TYPE_ID:
       return os << "id:" << si.getSignerName();
+    case SigningInfo::SIGNER_TYPE_HASHCHAIN_ID:
+      return os << "hash:" << si.getSignerName();  
     case SigningInfo::SIGNER_TYPE_KEY:
       return os << "key:" << si.getSignerName();
     case SigningInfo::SIGNER_TYPE_CERT:

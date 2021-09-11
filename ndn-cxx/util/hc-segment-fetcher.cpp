@@ -153,7 +153,7 @@ HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
     }
   }
   std::cout<< "8"<< std::endl;
-  std::cout<< "---middle----: "<< std::endl;
+  
   before_segment = segment;
   optional<Block> previousHash = data.getSignatureInfo().getNextHash();
   std::cout<< "---getnexthash----: "<< data.getSignatureType()<<std::endl;

@@ -48,7 +48,7 @@ printBlock(const Block& block)
 
 void
 HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &params) {
-  std::cout<<"hckeychain::sign:";
+  std::cout<<"hckeychain::sign:"<<params.getSignerType()<<params.getSignerName().toUri()<<std::endl;
   printBlock(nextHash);
   auto signatureInfo = data.getSignatureInfo();
   signatureInfo.setNextHash(nextHash);

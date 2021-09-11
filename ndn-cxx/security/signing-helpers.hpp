@@ -32,6 +32,17 @@ namespace security {
  * \return a SigningInfo for signing with an identity
  */
 SigningInfo
+signingByHashChainIdentity(const Name& identityName);
+/**
+ * \return a SigningInfo for signing with an identity
+ */
+SigningInfo
+signingByHashChainIdentity(const Name& identityName);
+
+/**
+ * \return a SigningInfo for signing with an identity
+ */
+SigningInfo
 signingByIdentity(const Name& identityName);
 
 /**
@@ -91,6 +102,7 @@ signingWithBlake3();
 } // namespace security
 
 using security::signingByIdentity;
+using security::signingByHashChainIdentity;
 using security::signingByKey;
 using security::signingByCertificate;
 using security::signingWithSha256;
