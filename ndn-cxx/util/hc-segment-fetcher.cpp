@@ -2,9 +2,12 @@
 #include <iostream>
 #include <unistd.h>
 #include "ndn-cxx/util/string-helper.hpp"
+#include "ndn-cxx/util/logger.hpp"
 
 namespace ndn {
 namespace util {
+
+NDN_LOG_INIT(ndn.util.HCSegmentFetcher);
 
 HCSegmentFetcher::HCSegmentFetcher(Face& face, security::v2::Validator& validator, const SegmentFetcher::Options& options) {
 
@@ -101,75 +104,71 @@ HCSegmentFetcher::start(Face &face,
 void
 printBlock(const Block& block)
 {
-  std::cout<< "size is :"<< std::dec <<block.value_size() << std::endl;
+  NDN_LOG_DEBUG("size is :"<< std::dec <<block.value_size());
   for(int i = 0; i < block.value_size(); i++) {
-    std::cout <<std::hex<<(unsigned)block.wire()[i]<<" ";
+    NDN_LOG_DEBUG(std::hex<<(unsigned)block.wire()[i]<<" ");
   }
-  std::cout<<std::endl;
 }
 
 
 void 
 HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
 
-  std::cout<< "randAfterValidationSuccess:"<< data.getSignatureInfo() << std::endl;
-  std::cout<< "randAfterValidationSuccess:"<< data.getSignatureType() << std::endl;
+  NDN_LOG_TRACE("randAfterValidationSuccess: "<< data.getSignatureInfo() << " " << data.getSignatureType());
   Name seqNo = data.getName().getSubName(-1);
-  std::cout << "SeqNo:"<< seqNo.toUri() <<std::endl;
+  NDN_LOG_DEBUG("SeqNo: " << seqNo.toUri());
 
-  //if(false) {
-  std::cout<< "1"<< std::endl;
   if(data.getSignatureType() == tlv::SignatureSha256WithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256) {
   int segment = data.getName().get(-1).toSegment();
 
-  std::cout<< "before_segment"<<before_segment<< std::endl;
+  NDN_LOG_DEBUG("before_segment: "<<before_segment);
   if (segment != 0) {
     if (segment - 1 == before_segment) {
-      std::cout<< "3"<< std::endl;
+      NDN_LOG_TRACE("randAfterValidationSuccess::1");
       if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size())) {
-        std::cout<< "3.1"<< std::endl;
+        NDN_LOG_TRACE("randAfterValidationSuccess::2");
         //onError(HASHCHAIN_ERROR, "Failure hash key error");
         afterSegmentValidated(data);
       } else {
-        std::cout<< "4"<< std::endl;
+        NDN_LOG_TRACE("randAfterValidationSuccess::3");
         success_count++;
         afterSegmentValidated(data);
       }
     } else {
-      std::cout<< "5"<< std::endl;
+      NDN_LOG_TRACE("randAfterValidationSuccess::4");
       afterSegmentValidated(data);
     }
   } else {
-    std::cout<< "6"<< std::endl;
+    NDN_LOG_TRACE("randAfterValidationSuccess::5");
     success_count++;
     afterSegmentValidated(data);
   }
 
-  std::cout<< "7"<< std::endl;
+  NDN_LOG_TRACE("randAfterValidationSuccess::6");
   int finalBlockId = data.getFinalBlock().value().toSegment();
   if (segment == finalBlockId) {
     if (success_count < finalBlockId / 2) {
       onError(HASHCHAIN_ERROR, "Failure hash key error");
     }
   }
-  std::cout<< "8"<< std::endl;
+  NDN_LOG_TRACE("randAfterValidationSuccess::7");
   
   before_segment = segment;
   optional<Block> previousHash = data.getSignatureInfo().getNextHash();
-  std::cout<< "---getnexthash----: "<< data.getSignatureType()<<std::endl;
+  NDN_LOG_DEBUG("---getnexthash----: "<< data.getSignatureType());
   if(previousHash != nullopt) {
     before_signature = std::make_shared<Block>(previousHash.value());
-    std::cout<< "previousHash: "<< std::endl;
+    NDN_LOG_TRACE("randAfterValidationSuccess::8");
     printBlock(data.getSignatureInfo().getNextHash().value());
   } else {
     before_signature = nullptr;
-    std::cout<< "previousHash: nullopt "<< std::endl;
+    NDN_LOG_TRACE("randAfterValidationSuccess::9");
   }
-  std::cout<< "9"<< std::endl;
+    NDN_LOG_TRACE("randAfterValidationSuccess::10");
   //before_signature = std::make_shared<Block>(data.getMetaInfo().getAppMetaInfo().front());
   } 
   else {
-    std::cout<< "else "<< std::endl;
+    NDN_LOG_TRACE("randAfterValidationSuccess::11");
     afterSegmentValidated(data);
   }
 }

@@ -23,11 +23,14 @@
 #include "ndn-cxx/encoding/block-helpers.hpp"
 #include "ndn-cxx/util/concepts.hpp"
 #include "ndn-cxx/util/string-helper.hpp"
+#include "ndn-cxx/util/logger.hpp"
 
 #include <boost/range/adaptor/reversed.hpp>
 #include <iostream>
 
 namespace ndn {
+
+NDN_LOG_INIT(ndn.signatureInfo);
 
 BOOST_CONCEPT_ASSERT((boost::EqualityComparable<SignatureInfo>));
 BOOST_CONCEPT_ASSERT((WireEncodable<SignatureInfo>));
@@ -62,7 +65,7 @@ SignatureInfo::wireEncode(EncodingImpl<TAG>& encoder, SignatureInfo::Type type) 
   //                   [KeyLocator]
   //                   [ValidityPeriod]
   //                   *OtherSubelements
-  //                   [NextHash]
+  //                   *NextHash
 
   // InterestSignatureInfo = INTEREST-SIGNATURE-INFO-TYPE TLV-LENGTH
   //                           SignatureType
@@ -214,34 +217,33 @@ SignatureInfo::setKeyLocator(optional<KeyLocator> keyLocator)
 optional<Block>
 SignatureInfo::getNextHash() const
 {
-  std::cout<<"getNexthash started..."<< std::endl;
+  NDN_LOG_TRACE("SignatureInfo::getNextHash");
   auto it = findOtherTlv(tlv::NextHashValue);
-  std::cout<<"getNexthash after findOtherTLv..."<< std::endl;
+
   if(it == m_otherTlvs.end()) {
-    std::cout<<"getNextHash none"<<std::endl;
+    NDN_LOG_DEBUG("getNextHash none");
     return nullopt;
   }
-  // if (it->size() <= 2) {
-  //   std::cout<<"getNextHash size 2"<<std::endl;
-  //   return nullopt;
-  // }
-  std::cout<<"getNextHash successful"<<std::endl;
+
+  NDN_LOG_DEBUG("getNextHash successful");
   return static_cast<Block>(*it);
 }
 
 SignatureInfo&
 SignatureInfo::setNextHash(optional<Block> nextHash)
 {
+  NDN_LOG_TRACE("SignatureInfo::setNextHash");
+
   if(!nextHash) {
     removeCustomTlv(tlv::NextHashValue);
   }
-  std::cout<<"m_otherTlvs size before:"<<m_otherTlvs.size()<<std::endl;
+  NDN_LOG_DEBUG("m_otherTlvs size before:"<<m_otherTlvs.size());
   if(nextHash == nullopt) {
-    std::cout<<"setNextHash none"<<std::endl;
+    NDN_LOG_DEBUG("setNextHash none");
     return *this;
   }
-  std::cout<<"setNextHash found: "<<nextHash.has_value()<<std::endl;
-  //nextHash.value().resetWire();
+
+  NDN_LOG_DEBUG("setNextHash found: "<<nextHash.has_value());
   addCustomTlv(nextHash.value());
 
   return *this;
@@ -316,15 +318,15 @@ SignatureInfo::getTime() const
 SignatureInfo&
 SignatureInfo::setTime(optional<time::system_clock::time_point> time)
 {
-  std::cout<<"removeCustomTlv none"<<std::endl;
+  NDN_LOG_TRACE("SignatureInfo::setTime");
   if (!time) {
     removeCustomTlv(tlv::SignatureTime);
   }
   else {
-    std::cout<<"addCustomTlv none"<<std::endl;
+    NDN_LOG_DEBUG("addCustomTlv");
     addCustomTlv(makeNonNegativeIntegerBlock(tlv::SignatureTime, time::toUnixTimestamp(*time).count()));
   }
-  std::cout<<"return none"<<std::endl;
+
   return *this;
 }
 

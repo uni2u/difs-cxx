@@ -31,24 +31,28 @@
 #include "ndn-cxx/security/safe-bag.hpp"
 #include "ndn-cxx/security/signing-info.hpp"
 #include "ndn-cxx/security/tpm/tpm.hpp"
+#include "ndn-cxx/util/logger.hpp"
 
 namespace ndn {
 namespace security {
+
+
 inline namespace v2{
+
+NDN_LOG_INIT(ndn.security.HCKeyChain);
 
 void
 printBlock(const Block& block)
 {
-  std::cout<< "size is :"<< std::dec <<block.value_size() << std::endl;
+  NDN_LOG_DEBUG("size is :"<< std::dec <<block.value_size());
   for(int i = 0; i < block.value_size(); i++) {
-    std::cout <<std::hex<<(unsigned)block.wire()[i]<<" ";
+    NDN_LOG_DEBUG(std::hex<<(unsigned)block.wire()[i]<<" ");
   }
-  std::cout<<std::endl;
 }
 
 void
 HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &params) {
-  std::cout<<"hckeychain::sign:"<<params.getSignerType()<<params.getSignerName().toUri()<<std::endl;
+  NDN_LOG_DEBUG("hckeychain::sign:"<<params.getSignerType()<<params.getSignerName().toUri());
   printBlock(nextHash);
   auto signatureInfo = data.getSignatureInfo();
   signatureInfo.setNextHash(nextHash);
