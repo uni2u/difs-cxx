@@ -110,7 +110,6 @@ printBlock(const Block& block)
   }
 }
 
-
 void 
 HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
 
@@ -118,56 +117,53 @@ HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
   Name seqNo = data.getName().getSubName(-1);
   NDN_LOG_DEBUG("SeqNo: " << seqNo.toUri());
 
-  if(data.getSignatureType() == tlv::SignatureSha256WithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256) {
-  int segment = data.getName().get(-1).toSegment();
+  if(data.getSignatureType() == tlv::SignatureHashChainWithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256) {
+    int segment = data.getName().get(-1).toSegment();
 
-  NDN_LOG_DEBUG("before_segment: "<<before_segment);
-  if (segment != 0) {
-    if (segment - 1 == before_segment) {
-      NDN_LOG_TRACE("randAfterValidationSuccess::1");
-      if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size())) {
-        NDN_LOG_TRACE("randAfterValidationSuccess::2");
-        //onError(HASHCHAIN_ERROR, "Failure hash key error");
-        afterSegmentValidated(data);
+    NDN_LOG_DEBUG("before_segment: "<<before_segment);
+    if (segment != 0) {
+      if (segment - 1 == before_segment) {
+        NDN_LOG_DEBUG("Ordered data segment");
+        if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size())) {
+          NDN_LOG_DEBUG("Wrong hash key");
+          onError(HASHCHAIN_ERROR, "Failure hash key error");
+        } else {
+          NDN_LOG_DEBUG("Correct hash key");
+          success_count++;
+          afterSegmentValidated(data);
+        }
       } else {
-        NDN_LOG_TRACE("randAfterValidationSuccess::3");
-        success_count++;
+        NDN_LOG_DEBUG("Disordered data segment");
         afterSegmentValidated(data);
       }
     } else {
-      NDN_LOG_TRACE("randAfterValidationSuccess::4");
+      NDN_LOG_DEBUG("First segment data");
+      success_count++;
       afterSegmentValidated(data);
     }
-  } else {
-    NDN_LOG_TRACE("randAfterValidationSuccess::5");
-    success_count++;
-    afterSegmentValidated(data);
-  }
 
-  NDN_LOG_TRACE("randAfterValidationSuccess::6");
-  int finalBlockId = data.getFinalBlock().value().toSegment();
-  if (segment == finalBlockId) {
-    if (success_count < finalBlockId / 2) {
-      onError(HASHCHAIN_ERROR, "Failure hash key error");
+    NDN_LOG_TRACE("randAfterValidationSuccess::6");
+    int finalBlockId = data.getFinalBlock().value().toSegment();
+    if (segment == finalBlockId) {
+      if (success_count < finalBlockId / 2) {
+        onError(HASHCHAIN_ERROR, "Failure hash key error");
+      }
     }
-  }
-  NDN_LOG_TRACE("randAfterValidationSuccess::7");
-  
-  before_segment = segment;
-  optional<Block> previousHash = data.getSignatureInfo().getNextHash();
-  NDN_LOG_DEBUG("---getnexthash----: "<< data.getSignatureType());
-  if(previousHash != nullopt) {
-    before_signature = std::make_shared<Block>(previousHash.value());
-    NDN_LOG_TRACE("randAfterValidationSuccess::8");
-    printBlock(data.getSignatureInfo().getNextHash().value());
+    NDN_LOG_TRACE("randAfterValidationSuccess::7");
+    
+    before_segment = segment;
+
+    optional<Block> previousHash = data.getSignatureInfo().getNextHash();
+    NDN_LOG_DEBUG("---getnexthash----: "<< data.getSignatureType());
+    if(previousHash != nullopt) {
+      before_signature = std::make_shared<Block>(previousHash.value());
+      NDN_LOG_TRACE("randAfterValidationSuccess::8");
+      printBlock(data.getSignatureInfo().getNextHash().value());
+    } else {
+      before_signature = nullptr;
+      NDN_LOG_TRACE("randAfterValidationSuccess::9");
+    }
   } else {
-    before_signature = nullptr;
-    NDN_LOG_TRACE("randAfterValidationSuccess::9");
-  }
-    NDN_LOG_TRACE("randAfterValidationSuccess::10");
-  //before_signature = std::make_shared<Block>(data.getMetaInfo().getAppMetaInfo().front());
-  } 
-  else {
     NDN_LOG_TRACE("randAfterValidationSuccess::11");
     afterSegmentValidated(data);
   }
