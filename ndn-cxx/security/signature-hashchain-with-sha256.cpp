@@ -24,14 +24,14 @@
 namespace ndn {
 
 SignatureHashChainWithSha256::SignatureHashChainWithSha256()
-  : Signature(SignatureInfo(tlv::DigestSha256))
+  : Signature(SignatureInfo(tlv::SignatureHashChainWithSha256))
 {
 }
 
 SignatureHashChainWithSha256::SignatureHashChainWithSha256(const Signature& signature)
   : Signature(signature)
 {
-  if (getType() != tlv::DigestSha256)
+  if (getType() != tlv::SignatureHashChainWithSha256)
     NDN_THROW(Error("Cannot construct DigestSha256 from SignatureType " + to_string(getType())));
 }
 
