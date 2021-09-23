@@ -464,7 +464,7 @@ KeyChain::sign(Data& data, const SigningInfo& params)
   std::tie(keyName, sigInfo) = prepareSignatureInfo(params);
 
   if(data.getSignatureInfo().hasNextHash()) {
-    std::cout<<"params.getSignatureInfo().hasNextHash()"<<std::endl;
+    NDN_LOG_TRACE("params.getSignatureInfo().hasNextHash()");
     sigInfo.setNextHash(data.getSignatureInfo().getNextHash());
   }
   data.setSignatureInfo(sigInfo);
@@ -640,7 +640,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_ID: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_ID"<<std::endl;
+      NDN_LOG_TRACE("SigningInfo::SIGNER_TYPE_ID");
       identity = params.getPibIdentity();
       if (!identity) {
         try {
@@ -654,13 +654,12 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_HASHCHAIN_ID: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_HASHCHAIN_ID"<<std::endl;
+      NDN_LOG_TRACE("SigningInfo::SIGNER_TYPE_HASHCHAIN_ID");
       identity = params.getPibIdentity();
-      std::cout<<"SigningInfo::1"<<std::endl;
       if (!identity) {
         try {
           identity = m_pib->getIdentity(params.getSignerName());
-          std::cout<<"SigningInfo::2"<<identity.getName()<<std::endl;
+          NDN_LOG_TRACE("SigningInfo::2" << identity.getName());
         }
         catch (const Pib::Error&) {
           NDN_THROW_NESTED(InvalidSigningInfoError("Signing identity `" +
@@ -673,7 +672,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
         }
         try {
           key = identity.getDefaultKey();
-          std::cout<<"SigningInfo::3"<<key.getName()<<std::endl;
+          NDN_LOG_TRACE("SigningInfo::3" << key.getName());
         }
         catch (const Pib::Error&) {
           NDN_THROW_NESTED(InvalidSigningInfoError("Signing identity `" + identity.getName().toUri() +
@@ -688,7 +687,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       return std::make_tuple(key.getName(), sigInfo);
     }    
     case SigningInfo::SIGNER_TYPE_KEY: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_KEY"<<std::endl;
+      NDN_LOG_TRACE("SigningInfo::SIGNER_TYPE_KEY");
       key = params.getPibKey();
       if (!key) {
         Name identityName = extractIdentityFromKeyName(params.getSignerName());
@@ -703,7 +702,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_CERT: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_CERT"<<std::endl;
+      NDN_LOG_TRACE("SigningInfo::SIGNER_TYPE_CERT");
       Name identityName = extractIdentityFromCertName(params.getSignerName());
       Name keyName = extractKeyNameFromCertName(params.getSignerName());
       try {
@@ -717,12 +716,13 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_SHA256: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_SHA256"<<std::endl;
+      NDN_LOG_TRACE("SigningInfo::SIGNER_TYPE_SHA256");
       sigInfo.setSignatureType(tlv::DigestSha256);
       NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
       return std::make_tuple(SigningInfo::getDigestSha256Identity(), sigInfo);
     }
     case SigningInfo::SIGNER_TYPE_HMAC: {
+      NDN_LOG_TRACE("SigningInfo::SIGNER_TYPE_HMAC");
       const Name& keyName = params.getSignerName();
       if (!m_tpm->hasKey(keyName)) {
         m_tpm->importPrivateKey(keyName, params.getHmacKey());
@@ -733,17 +733,19 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       return std::make_tuple(keyName, sigInfo);
     }
     case SigningInfo::SIGNER_TYPE_BLAKE2S: {
+      NDN_LOG_TRACE("SigningInfo::SIGNER_TYPE_BLAKE2S");
       sigInfo.setSignatureType(tlv::DigestBlake2s);
       NDN_LOG_TRACE("Prepared signature info: "<< sigInfo);
       return std::make_tuple(SigningInfo::getDigestBlake2sIdentity(), sigInfo);
     }
     case SigningInfo::SIGNER_TYPE_BLAKE3: {
+      NDN_LOG_TRACE("SigningInfo::SIGNER_TYPE_BLAKE3");
       sigInfo.setSignatureType(tlv::DigestBlake3);
       NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
       return std::make_tuple(SigningInfo::getDigestBlake3Identity(), sigInfo);
     }
     case SigningInfo::SIGNER_TYPE_HASHCHAIN_SHA256: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_SHA256"<<std::endl;
+      NDN_LOG_TRACE("SigningInfo::SIGNER_TYPE_HASHCHAIN_SHA256");
       //sigInfo.setNextHash(params.getSignatureInfo().getNextHash());
       sigInfo.setSignatureType(tlv::SignatureHashChainWithSha256);
       // sigInfo.setSignatureType(tlv::DigestSha256);
