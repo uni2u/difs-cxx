@@ -24,8 +24,12 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/hc-key-chain.hpp>
 #include <ndn-cxx/security/signing-helpers.hpp>
+#include <ndn-cxx/security/signing-info.hpp>
+#include <ndn-cxx/security/signature-sha256-with-rsa.hpp>
+#include <chrono>
 
 #include <iostream>
+#include <fstream>
 
 // Enclosing code in ndn simplifies coding (can also use `using namespace ndn`)
 namespace ndn {
@@ -33,17 +37,47 @@ namespace ndn {
 namespace examples {
 class Producer {
   public:
-	void run(std::istream* is) {
-		prepareData("/example/testApp/randomData", *is, true);
+	Producer(std::string name, std::string path) {
+		m_name = name;
+		m_path = path;
+	}
 
-		m_face.setInterestFilter("/example/testApp/randomData", bind(&Producer::onInterest, this, _1, _2),
+	void enableVerbose() { m_verbose = true; }
+
+	void disableVerbose() { m_verbose = false; }
+
+	void enableHC() { m_hc = true; }
+
+	void disableHC() { m_hc = false; }
+
+	void run() {
+		if(m_verbose) {
+			std::cout << "Segmentfetcher Producer Start..." << std::endl;
+			if(m_hc) {
+				std::cout << "Hashchain enabled" << std::endl;
+			} else {
+				std::cout << "Hashchain disabled" << std::endl;
+			}
+		}
+		prepareData();
+
+		m_face.setInterestFilter(m_name, bind(&Producer::onInterest, this, _1, _2),
 		                         nullptr, // RegisterPrefixSuccessCallback is optional
 		                         bind(&Producer::onRegisterFailed, this, _1, _2));
 		m_face.processEvents();
 	}
 
   private:
-	void prepareData(const std::string dataPrefix, std::istream& is, bool enable_haschain) {
+	void prepareData() {
+		std::ifstream inputFileStream;
+		inputFileStream.open(m_path, std::ios::in | std::ios::binary);
+		if(!inputFileStream.is_open()) {
+			std::cerr << "ERROR: cannot open " << m_path << std::endl;
+			exit(-1);
+		}
+
+		std::istream& is = inputFileStream;
+
 		int m_blockSize = 8600;
 		is.seekg(0, std::ios::beg);
 		auto beginPos = is.tellg();
@@ -53,6 +87,8 @@ class Producer {
 		int chunkSize = m_bytes / m_blockSize;
 		auto finalBlockId = ndn::name::Component::fromSegment(chunkSize);
 
+		auto m_start = std::chrono::high_resolution_clock::now();
+
 		for(int count = 0; count <= chunkSize; count++) {
 			uint8_t* buffer = new uint8_t[m_blockSize];
 			is.read(reinterpret_cast<char*>(buffer), m_blockSize);
@@ -60,11 +96,15 @@ class Producer {
 			auto readSize = is.gcount();
 
 			if(readSize > 0) {
-				auto data = std::make_shared<ndn::Data>(Name(dataPrefix).appendSegment(count));
+				auto data = std::make_shared<ndn::Data>(Name(m_name).appendSegment(count));
 				Block content = ndn::encoding::makeBinaryBlock(tlv::Content, buffer, readSize);
 				data->setFreshnessPeriod(3_s);
 				data->setContent(content);
 				data->setFinalBlock(finalBlockId);
+
+				if(!m_hc) {
+					m_keyChain.sign(*data);
+				}
 
 				m_data.push_back(data);
 			} else {
@@ -73,25 +113,33 @@ class Producer {
 			}
 		}
 
-		Block nextHash(ndn::lp::tlv::HashChain);
+		inputFileStream.close();
 
-		for(auto iter = m_data.rbegin(); iter != m_data.rend(); iter++) {
-			if(iter == m_data.rend()) {
-				m_hcKeyChain.sign(**iter, nextHash);
-			} else {
-				m_hcKeyChain.sign(**iter, nextHash, ndn::signingWithHashChainSha256());
+		if(m_hc) {
+			Block nextHash(ndn::lp::tlv::HashChain);
+			for(auto iter = m_data.rbegin(); iter != m_data.rend(); iter++) {
+				if(iter == m_data.rend()) {
+					m_hcKeyChain.sign(**iter, nextHash);
+				} else {
+					m_hcKeyChain.sign(**iter, nextHash, ndn::signingWithHashChainSha256());
+				}
+
+				nextHash = ndn::encoding::makeBinaryBlock(ndn::lp::tlv::HashChain, (*iter)->getSignatureValue().value(), (*iter)->getSignatureValue().value_size());
 			}
-
-			nextHash = ndn::encoding::makeBinaryBlock(ndn::lp::tlv::HashChain, (*iter)->getSignatureValue().value(), (*iter)->getSignatureValue().value_size());
 		}
+
+		auto finish = std::chrono::high_resolution_clock::now();
+
+		std::cout << "Preparing Data Completed: " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish - m_start).count() << " ns\n";
 	}
 
 	void onInterest(const Name& prefix, const ndn::Interest& interest) {
 		uint64_t segmentNo;
 		try {
 			Name::Component segmentComponent = interest.getName().get(prefix.size());
-			std::cout << prefix << std::endl;
-			std::cout << segmentComponent << std::endl;
+			if(m_verbose) {
+				std::cout << "OnInterest: " << interest.getName() << std::endl;
+			}
 			segmentNo = segmentComponent.toSegment();
 		} catch(const tlv::Error& e) {
 			std::cout << "failed" << std::endl;
@@ -119,35 +167,71 @@ class Producer {
 
   private:
 	Face m_face;
+	std::string m_name;
+	std::string m_path;
+
+	bool m_verbose = false;
+	bool m_hc = false;
+
 	ndn::HCKeyChain m_hcKeyChain;
+	KeyChain m_keyChain;
 	std::vector<shared_ptr<ndn::Data>> m_data;
 };
 
 } // namespace examples
 } // namespace ndn
 
-#include <iostream>
-#include <fstream>
+static int usage(const char* programName) {
+	std::cerr << "Usage: " << programName << " [-v] [-h] ndn-name file-path\n"
+	          << "\n"
+	          << "  -v: be verbose\n"
+	          << "  -h: enable HashChain(default: false)\n"
+	          << "  ndn-name: NDN Name for Data to be written\n"
+	          << "  file-path: File path to be read\n"
+	          << std::endl;
+	return 1;
+}
 
 int main(int argc, char** argv) {
-	std::ifstream inputFileStream;
-	std::istream* insertStream;
+	std::string name;
+	std::string path;
+	bool verbose = false;
+	bool hashchain = false;
 
-	if(strcmp(argv[1], "-") == 0) {
-		insertStream = &std::cin;
-	} else {
-		inputFileStream.open(argv[1], std::ios::in | std::ios::binary);
-		if(!inputFileStream.is_open()) {
-			std::cerr << "ERROR: cannot open " << argv[3] << std::endl;
-			return 2;
+	int opt;
+	while((opt = getopt(argc, argv, "vh")) != -1) {
+		switch(opt) {
+			case 'v':
+				verbose = true;
+				break;
+			case 'h':
+				hashchain = true;
+				break;
+			default:
+				return usage(argv[0]);
 		}
-
-		insertStream = &inputFileStream;
 	}
 
+	if(optind + 2 != argc) {
+		return usage(argv[0]);
+	}
+
+	name = argv[optind++];
+	path = argv[optind];
+
 	try {
-		ndn::examples::Producer producer;
-		producer.run(insertStream);
+		ndn::examples::Producer producer(name, path);
+		if(verbose)
+			producer.enableVerbose();
+		else
+			producer.disableVerbose();
+
+		if(hashchain)
+			producer.enableHC();
+		else
+			producer.disableHC();
+
+		producer.run();
 		return 0;
 	} catch(const std::exception& e) {
 		std::cerr << "ERROR: " << e.what() << std::endl;

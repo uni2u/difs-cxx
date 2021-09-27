@@ -29,6 +29,7 @@
 #include <ndn-cxx/security/validator-null.hpp>
 
 #include <iostream>
+#include <chrono>
 
 // Enclosing code in ndn simplifies coding (can also use `using namespace ndn`)
 namespace ndn {
@@ -37,12 +38,25 @@ namespace examples {
 
 class Consumer {
   public:
+	Consumer(std::string& name) { m_name = name; }
+
+	void enableVerbose() { m_verbose = true; }
+
+	void disableVerbose() { m_verbose = false; }
+
+	void enableHC() { m_hc = true; }
+
+	void disableHC() { m_hc = false; }
+
 	void run() {
-		ndn::Interest interest(Name("/example/testApp/randomData").appendSegment(0));
+		ndn::Interest interest(Name(m_name).appendSegment(0));
 		boost::chrono::milliseconds lifeTime(3_s);
+
 		interest.setInterestLifetime(lifeTime);
 		interest.setMustBeFresh(false);
-		std::cout << interest << std::endl;
+		if(m_verbose) {
+			std::cout << interest << std::endl;
+		}
 
 		ndn::security::ValidatorNull m_validator;
 
@@ -51,36 +65,115 @@ class Consumer {
 		options.interestLifetime = lifeTime;
 		options.maxTimeout = lifeTime;
 
-		std::shared_ptr<ndn::util::HCSegmentFetcher> hc_fetcher;
-		auto hcFetcher = hc_fetcher->start(m_face, interest, m_validator, options);
-		hcFetcher->onError.connect([](uint32_t errorCode, const std::string& errorMsg) { std::cout << "Error: " << errorMsg << std::endl; });
-		hcFetcher->afterSegmentValidated.connect([this, hcFetcher](const Data& data) { onData(data); });
-		hcFetcher->afterSegmentTimedOut.connect([this, hcFetcher]() { onTimeout(*hcFetcher); });
-		m_face.processEvents();
+		m_start = std::chrono::high_resolution_clock::now();
+
+		if(m_hc) {
+			std::cout << "Hashchain enabled" << std::endl;
+			std::shared_ptr<ndn::util::HCSegmentFetcher> hc_fetcher;
+			auto hcFetcher = hc_fetcher->start(m_face, interest, m_validator, options);
+			hcFetcher->onError.connect([this, hcFetcher](uint32_t errorCode, const std::string& errorMsg) { onError(errorMsg); });
+			hcFetcher->afterSegmentValidated.connect([this, hcFetcher](const Data& data) { onData(data); });
+			hcFetcher->afterSegmentTimedOut.connect([this, hcFetcher]() { onTimeout(*hcFetcher); });
+			hcFetcher->onComplete.connect([this, hcFetcher](const ndn::ConstBufferPtr& ptr) { onComplete(ptr); });
+
+			m_face.processEvents();
+		} else {
+			std::cout << "Hashchain disabled" << std::endl;
+			std::shared_ptr<ndn::util::SegmentFetcher> fetcher;
+			auto Fetcher = fetcher->start(m_face, interest, m_validator, options);
+			Fetcher->onError.connect([this, Fetcher](uint32_t errorCode, const std::string& errorMsg) { onError(errorMsg); });
+			Fetcher->afterSegmentValidated.connect([this, Fetcher](const Data& data) { onData(data); });
+			Fetcher->afterSegmentTimedOut.connect([this, Fetcher]() { onTimeout(*Fetcher); });
+			Fetcher->onComplete.connect([this, Fetcher](const ndn::ConstBufferPtr& ptr) { onComplete(ptr); });
+
+			m_face.processEvents();
+		}
 	}
 
   private:
 	Face m_face;
+	bool m_verbose = false;
+	bool m_hc = false;
+	std::string m_name;
+	std::chrono::_V2::system_clock::time_point m_start;
 
 	void onData(const Data& data) const {
-		std::cout << "Received Data " << data << std::endl;
-		auto content = data.getContent();
-		std::string msg = reinterpret_cast<const char*>(content.value());
-		msg = msg.substr(0, content.value_size());
-		std::cout << msg;
+		if(m_verbose) {
+			auto content = data.getContent();
+			std::string msg = reinterpret_cast<const char*>(content.value());
+			msg = msg.substr(0, content.value_size());
+			std::cout << msg;
+		}
 	}
 
 	void onTimeout(ndn::util::HCSegmentFetcher& hc_fetcher) const {
-		//     std::cout << "Timeout for " << interest << std::endl;
+		if(m_verbose)
+			std::cout << "Timeout" << std::endl;
 	}
+
+	void onTimeout(ndn::util::SegmentFetcher& fetcher) const {
+		if(m_verbose)
+			std::cout << "Timeout" << std::endl;
+	}
+
+	void onComplete(const ndn::ConstBufferPtr& ptr) const {
+		auto finish = std::chrono::high_resolution_clock::now();
+		std::cout << "Complete: " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish - m_start).count() << " ns\n";
+	}
+
+	void onError(const std::string& errorMsg) { std::cout << "Error: " << errorMsg << std::endl; }
 };
 
 } // namespace examples
 } // namespace ndn
 
+static int usage(const char* programName) {
+	std::cerr << "Usage: " << programName << " [-v] [-h] ndn-name\n"
+	          << "\n"
+	          << "  -v: be verbose\n"
+	          << "  -h: Check HashChain(default: false)\n"
+	          << "  ndn-name: NDN Name prefix for Data to be read\n"
+	          << std::endl;
+	return 1;
+}
+
 int main(int argc, char** argv) {
+	std::string name;
+	bool verbose = false;
+	bool hashchain = false;
+
+	int opt;
+	while((opt = getopt(argc, argv, "vh")) != -1) {
+		switch(opt) {
+			case 'v':
+				verbose = true;
+				break;
+			case 'h':
+				hashchain = true;
+				break;
+			default:
+				return usage(argv[0]);
+		}
+	}
+
+	if(optind + 1 != argc) {
+		return usage(argv[0]);
+	}
+
+	name = argv[optind];
+
 	try {
-		ndn::examples::Consumer consumer;
+		ndn::examples::Consumer consumer(name);
+		if(verbose)
+			consumer.enableVerbose();
+		else
+			consumer.disableVerbose();
+
+		if(hashchain)
+			consumer.enableHC();
+		else
+			consumer.disableHC();
+
 		consumer.run();
 		return 0;
 	} catch(const std::exception& e) {
