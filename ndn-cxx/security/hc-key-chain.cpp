@@ -73,6 +73,10 @@ HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &para
 
   KeyChain::sign(data, params);
 }
+void
+HCKeyChain::sign(Data &data, const SigningInfo &params) {
+  KeyChain::sign(data, params);
+}
 }
 }
 }

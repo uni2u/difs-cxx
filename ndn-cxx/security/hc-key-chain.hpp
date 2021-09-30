@@ -43,6 +43,8 @@ public:
 
   void
   sign(Data &data, const ndn::Block &nextHash, const SigningInfo& params = SigningInfo());
+    void
+  sign(Data &data, const SigningInfo& params = SigningInfo());
 };
 }
 }
