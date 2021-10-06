@@ -42,6 +42,10 @@ class Producer {
 		m_path = path;
 	}
 
+	void enableTestMode() {
+		m_test_mode = true;
+	}
+
 	void enableVerbose() { m_verbose = true; }
 
 	void disableVerbose() { m_verbose = false; }
@@ -49,6 +53,10 @@ class Producer {
 	void enableHC() { m_hc = true; }
 
 	void disableHC() { m_hc = false; }
+
+	void setSignerId(std::string id) {
+		m_id = id;
+	}
 
 	void run() {
 		if(m_verbose) {
@@ -89,6 +97,11 @@ class Producer {
 
 		auto m_start = std::chrono::high_resolution_clock::now();
 
+		security::SigningInfo signing_info;
+		if(!m_id.empty()) {
+			signing_info = security::SigningInfo(security::SigningInfo::SigningInfo::SIGNER_TYPE_ID, "id:" + m_id);
+		}
+
 		for(int count = 0; count <= chunkSize; count++) {
 			uint8_t* buffer = new uint8_t[m_blockSize];
 			is.read(reinterpret_cast<char*>(buffer), m_blockSize);
@@ -103,7 +116,7 @@ class Producer {
 				data->setFinalBlock(finalBlockId);
 
 				if(!m_hc) {
-					m_keyChain.sign(*data);
+					m_keyChain.sign(*data, signing_info);
 				}
 
 				m_data.push_back(data);
@@ -131,6 +144,9 @@ class Producer {
 		auto finish = std::chrono::high_resolution_clock::now();
 
 		std::cout << "Preparing Data Completed: " << std::chrono::duration_cast<std::chrono::nanoseconds>(finish - m_start).count() << " ns\n";
+
+		if(m_test_mode)
+			exit(0);
 	}
 
 	void onInterest(const Name& prefix, const ndn::Interest& interest) {
@@ -169,9 +185,11 @@ class Producer {
 	Face m_face;
 	std::string m_name;
 	std::string m_path;
+	std::string m_id;
 
 	bool m_verbose = false;
 	bool m_hc = false;
+	bool m_test_mode = false;
 
 	ndn::HCKeyChain m_hcKeyChain;
 	KeyChain m_keyChain;
@@ -186,6 +204,8 @@ static int usage(const char* programName) {
 	          << "\n"
 	          << "  -v: be verbose\n"
 	          << "  -h: enable HashChain(default: false)\n"
+	          << "  -t: enable test mode\n"
+	          << "  -s: signing id\n"
 	          << "  ndn-name: NDN Name for Data to be written\n"
 	          << "  file-path: File path to be read\n"
 	          << std::endl;
@@ -197,15 +217,23 @@ int main(int argc, char** argv) {
 	std::string path;
 	bool verbose = false;
 	bool hashchain = false;
+	bool test_mode = false;
+	std::string id;
 
 	int opt;
-	while((opt = getopt(argc, argv, "vh")) != -1) {
+	while((opt = getopt(argc, argv, "vhts:")) != -1) {
 		switch(opt) {
 			case 'v':
 				verbose = true;
 				break;
 			case 'h':
 				hashchain = true;
+				break;
+			case 't':
+				test_mode = true;
+				break;
+			case 's':
+				id = optarg;
 				break;
 			default:
 				return usage(argv[0]);
@@ -223,13 +251,15 @@ int main(int argc, char** argv) {
 		ndn::examples::Producer producer(name, path);
 		if(verbose)
 			producer.enableVerbose();
-		else
-			producer.disableVerbose();
 
 		if(hashchain)
 			producer.enableHC();
-		else
-			producer.disableHC();
+		
+		if(test_mode)
+			producer.enableTestMode();
+		
+		if(!id.empty())
+			producer.setSignerId(id);
 
 		producer.run();
 		return 0;
