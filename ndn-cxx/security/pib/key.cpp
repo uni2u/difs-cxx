@@ -22,6 +22,7 @@
 #include "ndn-cxx/security/pib/key.hpp"
 #include "ndn-cxx/security/pib/impl/key-impl.hpp"
 #include "ndn-cxx/security/certificate.hpp"
+#include "ndn-cxx/security/signing-info.hpp"
 
 namespace ndn {
 namespace security {
@@ -159,6 +160,10 @@ isValidKeyName(const Name& keyName)
 Name
 extractIdentityFromKeyName(const Name& keyName)
 {
+  if (keyName == SigningInfo::getDigestSha256Identity() || keyName == SigningInfo::getDigestHashChainWithSha256Identity()) {
+    return keyName;
+  }
+
   if (!isValidKeyName(keyName)) {
     NDN_THROW(std::invalid_argument("Key name `" + keyName.toUri() + "` "
                                     "does not respect the naming conventions"));

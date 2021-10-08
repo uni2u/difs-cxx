@@ -86,7 +86,7 @@ class Producer {
 
 		std::istream& is = inputFileStream;
 
-		int m_blockSize = 8600;
+		int m_blockSize = 8400;
 		is.seekg(0, std::ios::beg);
 		auto beginPos = is.tellg();
 		is.seekg(0, std::ios::end);
@@ -129,12 +129,16 @@ class Producer {
 		inputFileStream.close();
 
 		if(m_hc) {
+			std::cout << "Hash Chain Mode" << std::endl;
 			Block nextHash(ndn::lp::tlv::HashChain);
 			for(auto iter = m_data.rbegin(); iter != m_data.rend(); iter++) {
-				if(iter == m_data.rend()) {
-					m_hcKeyChain.sign(**iter, nextHash);
+				if(iter == m_data.rend() - 1) {
+					m_hcKeyChain.sign(**iter, nextHash, signing_info);
 				} else {
 					m_hcKeyChain.sign(**iter, nextHash, ndn::signingWithHashChainSha256());
+					// setting invalid signature
+					// ndn::ConstBufferPtr buf = std::make_shared<const ndn::Buffer>(32);
+					// (*iter)->setSignatureValue(buf);
 				}
 
 				nextHash = ndn::encoding::makeBinaryBlock(ndn::lp::tlv::HashChain, (*iter)->getSignatureValue().value(), (*iter)->getSignatureValue().value_size());

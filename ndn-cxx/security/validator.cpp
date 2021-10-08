@@ -24,6 +24,7 @@
 #include "ndn-cxx/face.hpp"
 #include "ndn-cxx/security/transform/public-key.hpp"
 #include "ndn-cxx/util/logger.hpp"
+#include "ndn-cxx/security/verification-helpers.hpp"
 
 namespace ndn {
 namespace security {
@@ -80,13 +81,29 @@ Validator::validate(const Data& data,
   NDN_LOG_DEBUG_DEPTH("Start validating data " << data.getName());
 
   m_policy->checkPolicy(data, state,
-      [this] (const shared_ptr<CertificateRequest>& certRequest, const shared_ptr<ValidationState>& state) {
+      [this, data] (const shared_ptr<CertificateRequest>& certRequest, const shared_ptr<ValidationState>& state) {
+
+      NDN_LOG_DEBUG_DEPTH("certRequeest is null ");
       if (certRequest == nullptr) {
         state->bypassValidation();
       }
       else {
-        // need to fetch key and validate it
-        requestCertificate(certRequest, state);
+        const Name klName = certRequest->interest.getName();
+        if (klName == SigningInfo::getDigestSha256Identity() || klName == SigningInfo::getDigestHashChainWithSha256Identity()) {
+          bool result = verifyDigest(data, DigestAlgorithm::SHA256);
+          if(result) {
+            NDN_LOG_DEBUG("digest-sha256 successful.");
+            state->bypassValidation();
+          }else {
+            std::ostringstream os;
+            os << "DigestAlgorithm:SHA256 check failed.";
+            state->fail({ValidationError::INVALID_SIGNATURE, os.str()});
+          }
+        } else {
+          // need to fetch key and validate it
+          NDN_LOG_DEBUG_DEPTH("need to fetch key and validate it ");
+          requestCertificate(certRequest, state);
+        }
       }
     });
 }

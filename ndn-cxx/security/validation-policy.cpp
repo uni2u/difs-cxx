@@ -65,6 +65,8 @@ getKeyLocatorName(const SignatureInfo& si, ValidationState& state)
 {
   if (si.getSignatureType() == tlv::DigestSha256) {
     return SigningInfo::getDigestSha256Identity();
+  } else if(si.getSignatureType() == tlv::SignatureHashChainWithSha256) {
+    return SigningInfo::getDigestHashChainWithSha256Identity();
   }
 
   if (!si.hasKeyLocator()) {

@@ -240,14 +240,7 @@ ValidationPolicyConfig::checkPolicy(const Data& data, const shared_ptr<Validatio
 {
   BOOST_ASSERT_MSG(!hasInnerPolicy(), "ValidationPolicyConfig must be a terminal inner policy");
 
-
-
   if (m_shouldBypass) {
-    return continueValidation(nullptr, state);
-  }
-
-  if (data.getSignatureType() == ndn::tlv::SignatureTypeValue::DigestSha256 ||
-      data.getSignatureType() == ndn::tlv::SignatureTypeValue::SignatureHashChainWithSha256) {
     return continueValidation(nullptr, state);
   }
 
@@ -279,11 +272,6 @@ ValidationPolicyConfig::checkPolicy(const Interest& interest, const shared_ptr<V
   if (m_shouldBypass) {
     return continueValidation(nullptr, state);
   }
-
-  if (interest.getSignatureInfo()->getSignatureType() == ndn::tlv::DigestSha256) {
-      NDN_LOG_DEBUG("interst digest-sha256 successful.");
-      return continueValidation(nullptr, state);
-  }//labry added 
 
   Name klName = getKeyLocatorName(interest, *state);
   if (!state->getOutcome()) { // already failed

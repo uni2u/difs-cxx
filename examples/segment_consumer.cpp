@@ -26,10 +26,13 @@
 #include <ndn-cxx/util/hc-segment-fetcher.hpp>
 #include <ndn-cxx/security/validator.hpp>
 #include <ndn-cxx/security/validator-config.hpp>
-#include <ndn-cxx/security/validator-null.hpp>
+// #include <ndn-cxx/security/validator-null.hpp>
 
 #include <iostream>
+#include <fstream>
 #include <chrono>
+
+#include <boost/property_tree/info_parser.hpp>
 
 // Enclosing code in ndn simplifies coding (can also use `using namespace ndn`)
 namespace ndn {
@@ -58,7 +61,27 @@ class Consumer {
 			std::cout << interest << std::endl;
 		}
 
-		ndn::security::ValidatorNull m_validator;
+		// ndn::security::ValidatorNull m_validator;
+		std::string configPath = "node.conf";
+
+		std::ifstream fin(configPath.c_str());
+		if(!fin.is_open())
+			std::cout << "open error" << std::endl;
+
+		using namespace boost::property_tree;
+		ptree propertyTree;
+		try {
+			read_info(fin, propertyTree);
+		} catch(const ptree_error& e) { std::cout << "failed to read configuration file '" + configPath + "'" << std::endl; }
+
+		ptree repoConf = propertyTree.get_child("repo");
+
+		boost::property_tree::ptree m_validatorNode;
+		ndn::security::ValidatorConfig m_validatorConfig(m_face);
+		m_validatorNode = repoConf.get_child("validator");
+		m_validatorConfig.load(m_validatorNode, configPath);
+		// ndn::security::Validator m_validator;
+		ndn::security::Validator& m_validator(m_validatorConfig);
 
 		ndn::util::SegmentFetcher::Options options;
 		options.initCwnd = 12;
@@ -68,7 +91,6 @@ class Consumer {
 		m_start = std::chrono::high_resolution_clock::now();
 
 		if(m_hc) {
-			std::cout << "Hashchain enabled" << std::endl;
 			std::shared_ptr<ndn::util::HCSegmentFetcher> hc_fetcher;
 			auto hcFetcher = hc_fetcher->start(m_face, interest, m_validator, options);
 			hcFetcher->onError.connect([this, hcFetcher](uint32_t errorCode, const std::string& errorMsg) { onError(errorMsg); });
@@ -78,7 +100,6 @@ class Consumer {
 
 			m_face.processEvents();
 		} else {
-			std::cout << "Hashchain disabled" << std::endl;
 			std::shared_ptr<ndn::util::SegmentFetcher> fetcher;
 			auto Fetcher = fetcher->start(m_face, interest, m_validator, options);
 			Fetcher->onError.connect([this, Fetcher](uint32_t errorCode, const std::string& errorMsg) { onError(errorMsg); });
