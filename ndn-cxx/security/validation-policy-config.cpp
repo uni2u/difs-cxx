@@ -246,12 +246,30 @@ ValidationPolicyConfig::checkPolicy(const Data& data, const shared_ptr<Validatio
     return continueValidation(nullptr, state);
   }
 
-  if (data.getSignatureType() == ndn::tlv::SignatureTypeValue::DigestSha256 ||
-      data.getSignatureType() == ndn::tlv::SignatureTypeValue::SignatureHashChainWithSha256) {
-    return continueValidation(nullptr, state);
+  // if (data.getSignatureType() == ndn::tlv::SignatureTypeValue::DigestSha256 ||
+  //     data.getSignatureType() == ndn::tlv::SignatureTypeValue::SignatureHashChainWithSha256) {
+  //   return continueValidation(nullptr, state);
+  // }
+
+  //for sha256
+  if (data.getSignatureType() == ndn::tlv::SignatureTypeValue::DigestSha256 || 
+  data.getSignatureType() == ndn::tlv::SignatureTypeValue::SignatureHashChainWithSha256) {
+
+    bool result = verifyDigest(data, DigestAlgorithm::SHA256);
+    if(result) {
+      NDN_LOG_DEBUG("digest-sha256 successful.");
+      return continueValidation(nullptr, state);
+    }else {
+      std::ostringstream os;
+      os << "DigestAlgorithm:SHA256 check failed.";
+      return state->fail({ValidationError::INVALID_SIGNATURE, os.str()});
+    }
   }
+  //for sha256 ends
 
   Name klName = getKeyLocatorName(data, *state);
+
+
   if (!state->getOutcome()) { // already failed
     return;
   }
