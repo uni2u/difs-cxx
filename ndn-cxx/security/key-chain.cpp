@@ -672,7 +672,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
         }
         try {
           key = identity.getDefaultKey();
-          NDN_LOG_TRACE("SigningInfo::3" << key.getName());
+          NDN_LOG_TRACE("SigningInfo::3" + key.getName().toUri());
         }
         catch (const Pib::Error&) {
           NDN_THROW_NESTED(InvalidSigningInfoError("Signing identity `" + identity.getName().toUri() +

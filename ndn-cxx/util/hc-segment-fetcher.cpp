@@ -1,6 +1,7 @@
 #include <ndn-cxx/util/hc-segment-fetcher.hpp>
 #include <iostream>
 #include <unistd.h>
+#include <string.h>
 #include "ndn-cxx/util/string-helper.hpp"
 #include "ndn-cxx/util/logger.hpp"
 
@@ -105,9 +106,11 @@ void
 printBlock(const Block& block)
 {
   NDN_LOG_DEBUG("size is :"<< std::dec <<block.value_size());
-  for(int i = 0; i < block.value_size(); i++) {
-    NDN_LOG_DEBUG(std::hex<<(unsigned)block.wire()[i]<<" ");
+  std::ostringstream next_hash_str;
+  for(int i = 4; i < block.value_size()+4; i++) {
+    next_hash_str<<std::hex<<(unsigned)block.wire()[i]<<" ";
   }
+  NDN_LOG_DEBUG(next_hash_str.str());
 }
 
 void 
