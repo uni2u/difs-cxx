@@ -91,6 +91,7 @@ enum : uint32_t {
   SignatureSeqNum                 = 42,
   LinkDelegation                  = 31,
   LinkPreference                  = 30,
+  //NextHash                        = 32,
 
   NameComponentMin = 1,
   NameComponentMax = 65535,
@@ -133,7 +134,11 @@ enum SignatureTypeValue : uint16_t {
   SignatureSha256WithRsa   = 1,
   SignatureSha256WithEcdsa = 3,
   SignatureHmacWithSha256  = 4,
+  SignatureHashChainWithEcdsa = 9,
+  SignatureHashChainWithSha256 = 10,
   NullSignature            = 200,
+  DigestBlake2s            = 6,
+  DigestBlake3             = 7,
 };
 
 std::ostream&
@@ -146,6 +151,7 @@ enum {
   ValidityPeriod = 253,
   NotBefore = 254,
   NotAfter = 255,
+  NextHashValue = 259,
 
   AdditionalDescription = 258,
   DescriptionEntry = 512,

@@ -35,12 +35,37 @@
 namespace ndn {
 namespace security {
 inline namespace v2{
+
+void
+printBlock(const Block& block)
+{
+  std::cout<< "size is :"<< std::dec <<block.value_size() << std::endl;
+  for(int i = 0; i < block.value_size(); i++) {
+    std::cout <<std::hex<<(unsigned)block.wire()[i]<<" ";
+  }
+  std::cout<<std::endl;
+}
+
 void
 HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &params) {
-  auto metaInfo = data.getMetaInfo();
-  metaInfo.addAppMetaInfo(nextHash);
+  std::cout<<"hckeychain::sign:"<<params.getSignerType()<<params.getSignerName().toUri()<<std::endl;
+  printBlock(nextHash);
+  auto signatureInfo = data.getSignatureInfo();
+  signatureInfo.setNextHash(nextHash);
+  // signatureInfo.setTime(time::system_clock::time_point(1590169108480_ms));
+  // optional<time::system_clock::time_point> tmp = signatureInfo.getTime();
+  // if(tmp != nullopt) {
+  //   std::cout<<"getTime"<< tmp.value().time_since_epoch().count() <<std::endl;
+  // } else {
+  //   std::cout<<"gettime null"<<std::endl;
+  //}
+  // auto metaInfo = data.getMetaInfo();
+  // metaInfo.addAppMetaInfo(nextHash);
 
-  data.setMetaInfo(metaInfo);
+  // data.setMetaInfo(metaInfo);
+  data.setSignatureInfo(signatureInfo);
+  // std::cout<<"second:"<<std::endl;
+  // printBlock(data.getSignatureInfo().getNextHash().value());
 
   KeyChain::sign(data, params);
 }

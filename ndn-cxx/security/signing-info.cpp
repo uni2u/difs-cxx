@@ -52,6 +52,27 @@ SigningInfo::getDigestSha256Identity()
 }
 
 const Name&
+SigningInfo::getDigestHashChainWithSha256Identity()
+{
+  static Name digestHashChainWithSha256Identity("/localhost/identity/digest-hashchain-with-sha256");
+  return digestHashChainWithSha256Identity;
+}
+
+const Name&
+SigningInfo::getDigestBlake2sIdentity()
+{
+  static Name digestBlake2sIdentity("/localhost/identity/digest-blake2s");
+  return digestBlake2sIdentity;
+}
+
+const Name&
+SigningInfo::getDigestBlake3Identity()
+{
+  static Name digestBlake3Identity("/localhost/identity/digest-blake3");
+  return digestBlake3Identity;
+}
+
+const Name&
 SigningInfo::getHmacIdentity()
 {
   static Name hmacIdentity("/localhost/identity/hmac");
@@ -67,7 +88,8 @@ SigningInfo::SigningInfo(SignerType signerType,
   , m_info(signatureInfo)
   , m_signedInterestFormat(SignedInterestFormat::V02)
 {
-  BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_HMAC);
+   BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_HASHCHAIN_SHA256);
+  // BOOST_ASSERT(signerType >= SIGNER_TYPE_NULL && signerType <= SIGNER_TYPE_BLAKE3);
 }
 
 SigningInfo::SigningInfo(const Identity& identity)
@@ -105,6 +127,9 @@ SigningInfo::SigningInfo(const std::string& signingStr)
       setSigningIdentity(nameArg);
     }
   }
+   else if (scheme == "hash") {
+    setSigningIdentity(nameArg);
+  } 
   else if (scheme == "key") {
     setSigningKeyName(nameArg);
   }
@@ -124,6 +149,15 @@ SigningInfo&
 SigningInfo::setSigningIdentity(const Name& identity)
 {
   m_type = SIGNER_TYPE_ID;
+  m_name = identity;
+  m_identity = Identity();
+  return *this;
+}
+
+SigningInfo&
+SigningInfo::setSigningHashChainIdentity(const Name& identity)
+{
+  m_type = SIGNER_TYPE_HASHCHAIN_ID;
   m_name = identity;
   m_identity = Identity();
   return *this;
@@ -206,6 +240,8 @@ operator<<(std::ostream& os, const SigningInfo& si)
       return os;
     case SigningInfo::SIGNER_TYPE_ID:
       return os << "id:" << si.getSignerName();
+    case SigningInfo::SIGNER_TYPE_HASHCHAIN_ID:
+      return os << "hash:" << si.getSignerName();  
     case SigningInfo::SIGNER_TYPE_KEY:
       return os << "key:" << si.getSignerName();
     case SigningInfo::SIGNER_TYPE_CERT:
@@ -214,6 +250,10 @@ operator<<(std::ostream& os, const SigningInfo& si)
       return os << "id:" << SigningInfo::getDigestSha256Identity();
     case SigningInfo::SIGNER_TYPE_HMAC:
       return os << "id:" << si.getSignerName();
+    case SigningInfo::SIGNER_TYPE_BLAKE2S:
+      return os << "id:" << SigningInfo::getDigestBlake2sIdentity();
+    case SigningInfo::SIGNER_TYPE_BLAKE3:
+      return os << "id:" << SigningInfo::getDigestBlake3Identity();
   }
   NDN_THROW(std::invalid_argument("Unknown signer type"));
   return os;

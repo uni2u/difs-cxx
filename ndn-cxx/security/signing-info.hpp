@@ -71,6 +71,15 @@ public:
     SIGNER_TYPE_SHA256 = 4,
     /// Signer is a HMAC key.
     SIGNER_TYPE_HMAC = 5,
+    /// Use a Blake2s digest only, no signer needs to be specified.
+    SIGNER_TYPE_BLAKE2S = 6,
+    /// Use a Blake3 digest only, no signer needs to be specified.
+    SIGNER_TYPE_BLAKE3 = 7,
+
+    SIGNER_TYPE_HASHCHAIN_SHA256 = 10,
+
+    SIGNER_TYPE_HASHCHAIN_ID = 11,
+
   };
 
 public:
@@ -122,6 +131,13 @@ public:
    */
   SigningInfo&
   setSigningIdentity(const Name& identity);
+
+    /**
+   * @brief Set signer as an hashChainIdentity with name @p identity
+   * @post Change the signerType to SIGNER_TYPE_HASHCHAIN_ID
+   */
+  SigningInfo&
+  setSigningHashChainIdentity(const Name& identity);
 
   /**
    * @brief Set signer as a key with name @p keyName
@@ -291,6 +307,25 @@ public:
    */
   static const Name&
   getDigestSha256Identity();
+
+
+    /**
+   * @brief A localhost identity to indicate that the signature is generated using HC with SHA-256.
+   */
+  static const Name&
+  getDigestHashChainWithSha256Identity();
+
+  /**
+   * @brief A localhost identity to indicate that the signature is generated using Blake3.
+   */
+  static const Name&
+  getDigestBlake2sIdentity();
+
+  /**
+   * @brief A localhost identity to indicate that the signature is generated using Blake3.
+   */
+  static const Name&
+  getDigestBlake3Identity();
 
   /**
    * @brief A localhost identity to indicate that the signature is generated using an HMAC key.

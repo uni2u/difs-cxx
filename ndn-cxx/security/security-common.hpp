@@ -97,6 +97,7 @@ enum class KeyType {
   EC,       ///< Elliptic Curve key (e.g. for ECDSA), supports sign/verify operations
   AES,      ///< AES key, supports encrypt/decrypt operations
   HMAC,     ///< HMAC key, supports sign/verify operations
+  HASHCHAIN,
 };
 
 std::ostream&
@@ -114,6 +115,7 @@ enum class DigestAlgorithm {
   SHA3_256,
   SHA3_384,
   SHA3_512,
+  BLAKE3,
 };
 
 std::ostream&

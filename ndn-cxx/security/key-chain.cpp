@@ -19,6 +19,9 @@
  * See AUTHORS.md for complete list of ndn-cxx authors and contributors.
  */
 
+#include <iostream>
+#include <algorithm>
+
 #include "ndn-cxx/security/key-chain.hpp"
 
 #include "ndn-cxx/encoding/buffer-stream.hpp"
@@ -457,8 +460,13 @@ KeyChain::sign(Data& data, const SigningInfo& params)
 {
   Name keyName;
   SignatureInfo sigInfo;
+
   std::tie(keyName, sigInfo) = prepareSignatureInfo(params);
 
+  if(data.getSignatureInfo().hasNextHash()) {
+    std::cout<<"params.getSignatureInfo().hasNextHash()"<<std::endl;
+    sigInfo.setNextHash(data.getSignatureInfo().getNextHash());
+  }
   data.setSignatureInfo(sigInfo);
 
   EncodingBuffer encoder;
@@ -618,6 +626,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
   pib::Identity identity;
   pib::Key key;
 
+  //std::cout<<"SigningInfo::getSignerType()"<<std::endl;
   switch (params.getSignerType()) {
     case SigningInfo::SIGNER_TYPE_NULL: {
       try {
@@ -631,6 +640,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_ID: {
+      std::cout<<"SigningInfo::SIGNER_TYPE_ID"<<std::endl;
       identity = params.getPibIdentity();
       if (!identity) {
         try {
@@ -643,7 +653,42 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       }
       break;
     }
+    case SigningInfo::SIGNER_TYPE_HASHCHAIN_ID: {
+      std::cout<<"SigningInfo::SIGNER_TYPE_HASHCHAIN_ID"<<std::endl;
+      identity = params.getPibIdentity();
+      std::cout<<"SigningInfo::1"<<std::endl;
+      if (!identity) {
+        try {
+          identity = m_pib->getIdentity(params.getSignerName());
+          std::cout<<"SigningInfo::2"<<identity.getName()<<std::endl;
+        }
+        catch (const Pib::Error&) {
+          NDN_THROW_NESTED(InvalidSigningInfoError("Signing identity `" +
+                                                   params.getSignerName().toUri() + "` does not exist"));
+        }
+      }
+      if (!key) {
+        if (!identity) {
+          NDN_THROW(InvalidSigningInfoError("Cannot determine signing parameters"));
+        }
+        try {
+          key = identity.getDefaultKey();
+          std::cout<<"SigningInfo::3"<<key.getName()<<std::endl;
+        }
+        catch (const Pib::Error&) {
+          NDN_THROW_NESTED(InvalidSigningInfoError("Signing identity `" + identity.getName().toUri() +
+                                                  "` does not have a default certificate"));
+        }
+      }
+      //sigInfo.setSignatureType(tlv::SignatureHashChainWithEcdsa);
+      sigInfo.setSignatureType(getSignatureType(KeyType::HASHCHAIN, params.getDigestAlgorithm()));
+      sigInfo.setKeyLocator(key.getName());
+
+      NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
+      return std::make_tuple(key.getName(), sigInfo);
+    }    
     case SigningInfo::SIGNER_TYPE_KEY: {
+      std::cout<<"SigningInfo::SIGNER_TYPE_KEY"<<std::endl;
       key = params.getPibKey();
       if (!key) {
         Name identityName = extractIdentityFromKeyName(params.getSignerName());
@@ -658,6 +703,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_CERT: {
+      std::cout<<"SigningInfo::SIGNER_TYPE_CERT"<<std::endl;
       Name identityName = extractIdentityFromCertName(params.getSignerName());
       Name keyName = extractKeyNameFromCertName(params.getSignerName());
       try {
@@ -671,6 +717,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_SHA256: {
+      std::cout<<"SigningInfo::SIGNER_TYPE_SHA256"<<std::endl;
       sigInfo.setSignatureType(tlv::DigestSha256);
       NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
       return std::make_tuple(SigningInfo::getDigestSha256Identity(), sigInfo);
@@ -684,6 +731,24 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       sigInfo.setKeyLocator(keyName);
       NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
       return std::make_tuple(keyName, sigInfo);
+    }
+    case SigningInfo::SIGNER_TYPE_BLAKE2S: {
+      sigInfo.setSignatureType(tlv::DigestBlake2s);
+      NDN_LOG_TRACE("Prepared signature info: "<< sigInfo);
+      return std::make_tuple(SigningInfo::getDigestBlake2sIdentity(), sigInfo);
+    }
+    case SigningInfo::SIGNER_TYPE_BLAKE3: {
+      sigInfo.setSignatureType(tlv::DigestBlake3);
+      NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
+      return std::make_tuple(SigningInfo::getDigestBlake3Identity(), sigInfo);
+    }
+    case SigningInfo::SIGNER_TYPE_HASHCHAIN_SHA256: {
+      std::cout<<"SigningInfo::SIGNER_TYPE_SHA256"<<std::endl;
+      //sigInfo.setNextHash(params.getSignatureInfo().getNextHash());
+      sigInfo.setSignatureType(tlv::SignatureHashChainWithSha256);
+      // sigInfo.setSignatureType(tlv::DigestSha256);
+      NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
+      return std::make_tuple(SigningInfo::getDigestHashChainWithSha256Identity(), sigInfo);
     }
     default: {
       NDN_THROW(InvalidSigningInfoError("Unrecognized signer type " +
@@ -722,6 +787,18 @@ KeyChain::sign(const InputBuffers& bufs, const Name& keyName, DigestAlgorithm di
     OBufferStream os;
     bufferSource(bufs) >> digestFilter(DigestAlgorithm::SHA256) >> streamSink(os);
     return os.buf();
+  } else if (keyName == SigningInfo::getDigestBlake2sIdentity()) {
+    OBufferStream os;
+    bufferSource(bufs) >> digestFilter(DigestAlgorithm::BLAKE2S_256) >> streamSink(os);
+    return os.buf();
+  } else if (keyName == SigningInfo::getDigestBlake3Identity()) {
+    OBufferStream os;
+    bufferSource(bufs) >> digestFilter(DigestAlgorithm::BLAKE3) >> streamSink(os);
+    return os.buf();
+  } else if (keyName == SigningInfo::getDigestHashChainWithSha256Identity()) {
+    OBufferStream os;
+    bufferSource(bufs) >> digestFilter(DigestAlgorithm::SHA256) >> streamSink(os);
+    return os.buf();
   }
 
   auto signature = m_tpm->sign(bufs, keyName, digestAlgorithm);
@@ -744,6 +821,8 @@ KeyChain::getSignatureType(KeyType keyType, DigestAlgorithm)
     return tlv::SignatureSha256WithEcdsa;
   case KeyType::HMAC:
     return tlv::SignatureHmacWithSha256;
+  case KeyType::HASHCHAIN:
+    return tlv::SignatureHashChainWithEcdsa;
   default:
     NDN_THROW(Error("Unsupported key type " + boost::lexical_cast<std::string>(keyType)));
   }

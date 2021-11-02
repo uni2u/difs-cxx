@@ -1,6 +1,7 @@
 #include <ndn-cxx/util/hc-segment-fetcher.hpp>
 #include <iostream>
 #include <unistd.h>
+#include "ndn-cxx/util/string-helper.hpp"
 
 namespace ndn {
 namespace util {
@@ -76,7 +77,7 @@ HCSegmentFetcher::start(Face &face,
 //     for (auto iter = content.elements_begin(); iter != content.elements_end(); iter++) {
 //       if(iter->type() == tlv::SignatureValue) {
 //         auto signature_block = iter.base();
-//         std::shared_ptr<Block> block = std::make_shared<Block>(*signature_block);
+//         std::shared_ptr<Block> block = std::make_shared<Block>(*signature_block); 
 //         nextHash_map.insert(std::pair<int, std::shared_ptr<Block>>(segment_no, block));
 //       }
 //     }
@@ -85,7 +86,7 @@ HCSegmentFetcher::start(Face &face,
 //   if(segment_no != 0){
 //     auto hash_block = nextHash_map.find(segment_no-1)->second;
 //     if(hash_block == 0) {
-//       std::shared_ptr<Data> m_data = std::make_shared<Data>(data);
+//       std::shared_ptr<Data> m_data = std::make_shared<Data>(data); 
 //       data_map.insert(std::pair<int, std::shared_ptr<Data>>(segment_no, m_data));
 //     } else if (memcmp((void*)data.getSignatureValue().value(), (void*)hash_block->value(), data.getSignatureValue().value_size())) {
 //       onError(HASHCHAIN_ERROR, "Failure hash key error");
@@ -97,36 +98,80 @@ HCSegmentFetcher::start(Face &face,
 //     afterSegmentValidated(data);
 //   }
 // }
-
 void
+printBlock(const Block& block)
+{
+  std::cout<< "size is :"<< std::dec <<block.value_size() << std::endl;
+  for(int i = 0; i < block.value_size(); i++) {
+    std::cout <<std::hex<<(unsigned)block.wire()[i]<<" ";
+  }
+  std::cout<<std::endl;
+}
+
+
+void 
 HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
+
+  std::cout<< "randAfterValidationSuccess:"<< data.getSignatureInfo() << std::endl;
+  std::cout<< "randAfterValidationSuccess:"<< data.getSignatureType() << std::endl;
+  Name seqNo = data.getName().getSubName(-1);
+  std::cout << "SeqNo:"<< seqNo.toUri() <<std::endl;
+
+  //if(false) {
+  std::cout<< "1"<< std::endl;
+  if(data.getSignatureType() == tlv::SignatureSha256WithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256) {
   int segment = data.getName().get(-1).toSegment();
 
+  std::cout<< "before_segment"<<before_segment<< std::endl;
   if (segment != 0) {
     if (segment - 1 == before_segment) {
-      if(memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size())) {
-        onError(HASHCHAIN_ERROR, "Failure hash key error");
+      std::cout<< "3"<< std::endl;
+      if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size())) {
+        std::cout<< "3.1"<< std::endl;
+        //onError(HASHCHAIN_ERROR, "Failure hash key error");
+        afterSegmentValidated(data);
       } else {
+        std::cout<< "4"<< std::endl;
         success_count++;
         afterSegmentValidated(data);
       }
     } else {
+      std::cout<< "5"<< std::endl;
       afterSegmentValidated(data);
     }
   } else {
+    std::cout<< "6"<< std::endl;
     success_count++;
     afterSegmentValidated(data);
   }
 
+  std::cout<< "7"<< std::endl;
   int finalBlockId = data.getFinalBlock().value().toSegment();
   if (segment == finalBlockId) {
     if (success_count < finalBlockId / 2) {
       onError(HASHCHAIN_ERROR, "Failure hash key error");
     }
   }
-
+  std::cout<< "8"<< std::endl;
+  
   before_segment = segment;
-  before_signature = std::make_shared<Block>(data.getMetaInfo().getAppMetaInfo().front());
+  optional<Block> previousHash = data.getSignatureInfo().getNextHash();
+  std::cout<< "---getnexthash----: "<< data.getSignatureType()<<std::endl;
+  if(previousHash != nullopt) {
+    before_signature = std::make_shared<Block>(previousHash.value());
+    std::cout<< "previousHash: "<< std::endl;
+    printBlock(data.getSignatureInfo().getNextHash().value());
+  } else {
+    before_signature = nullptr;
+    std::cout<< "previousHash: nullopt "<< std::endl;
+  }
+  std::cout<< "9"<< std::endl;
+  //before_signature = std::make_shared<Block>(data.getMetaInfo().getAppMetaInfo().front());
+  } 
+  else {
+    std::cout<< "else "<< std::endl;
+    afterSegmentValidated(data);
+  }
 }
 
 void

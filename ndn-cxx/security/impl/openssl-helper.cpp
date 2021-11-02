@@ -19,7 +19,10 @@
  * See AUTHORS.md for complete list of ndn-cxx authors and contributors.
  */
 
+#include <iostream>
+
 #include "ndn-cxx/security/impl/openssl-helper.hpp"
+//#include "blake3.hpp"
 
 namespace ndn {
 namespace security {
@@ -28,30 +31,45 @@ namespace detail {
 const EVP_MD*
 digestAlgorithmToEvpMd(DigestAlgorithm algo)
 {
+  // std::cout << "!!!here" << std::endl;
+
   switch (algo) {
   case DigestAlgorithm::SHA224:
+    // std::cout << "SHA224" << std::endl;
     return EVP_sha224();
   case DigestAlgorithm::SHA256:
+    // std::cout << "SHA256" << std::endl;
     return EVP_sha256();
   case DigestAlgorithm::SHA384:
+    // std::cout << "SHA384" << std::endl;
     return EVP_sha384();
   case DigestAlgorithm::SHA512:
+    // std::cout << "SHA512" << std::endl;
     return EVP_sha512();
-#if OPENSSL_VERSION_NUMBER >= 0x1010000fL && !defined(OPENSSL_NO_BLAKE2)
-  case DigestAlgorithm::BLAKE2B_512:
-    return EVP_blake2b512();
-  case DigestAlgorithm::BLAKE2S_256:
-    return EVP_blake2s256();
-#endif
+// #if OPENSSL_VERSION_NUMBER >= 0x1010000fL && !defined(OPENSSL_NO_BLAKE2)
+//   case DigestAlgorithm::BLAKE2B_512:
+//     // std::cout << "BLAKE2B_512" << std::endl;
+//     return EVP_blake2b512();
+//   case DigestAlgorithm::BLAKE2S_256:
+//     // std::cout << "BLAKE2S_256" << std::endl;
+//     return EVP_blake2s256();
+// #endif
 #if OPENSSL_VERSION_NUMBER >= 0x10101001L
   case DigestAlgorithm::SHA3_224:
+    // std::cout << "SHA3_224" << std::endl;
     return EVP_sha3_224();
   case DigestAlgorithm::SHA3_256:
+    // std::cout << "SHA3_256" << std::endl;
     return EVP_sha3_256();
   case DigestAlgorithm::SHA3_384:
+    // std::cout << "SHA3_384" << std::endl;
     return EVP_sha3_384();
   case DigestAlgorithm::SHA3_512:
+    // std::cout << "SHA3_512" << std::endl;
     return EVP_sha3_512();
+  // case DigestAlgorithm::BLAKE3:
+  //   // std::cout << "BLAKE3" << std::endl;
+  //   return EVP_blake3();
 #endif
   default:
     return nullptr;

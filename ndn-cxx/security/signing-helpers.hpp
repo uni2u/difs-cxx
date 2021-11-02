@@ -32,6 +32,17 @@ namespace security {
  * \return a SigningInfo for signing with an identity
  */
 SigningInfo
+signingByHashChainIdentity(const Name& identityName);
+/**
+ * \return a SigningInfo for signing with an identity
+ */
+SigningInfo
+signingByHashChainIdentity(const Name& identityName);
+
+/**
+ * \return a SigningInfo for signing with an identity
+ */
+SigningInfo
 signingByIdentity(const Name& identityName);
 
 /**
@@ -70,12 +81,34 @@ signingByCertificate(const v2::Certificate& cert);
 SigningInfo
 signingWithSha256();
 
+/**
+ * \return a SigningInfo for signing with HC Sha256
+ */
+SigningInfo
+signingWithHashChainSha256();
+
+/**
+ * \return a SigningInfo for signing with Blake2s
+ */
+SigningInfo
+signingWithBlake2s();
+
+/**
+ * \return a SigningInfo for signing with Blake3
+ */
+SigningInfo
+signingWithBlake3();
+
 } // namespace security
 
 using security::signingByIdentity;
+using security::signingByHashChainIdentity;
 using security::signingByKey;
 using security::signingByCertificate;
 using security::signingWithSha256;
+using security::signingWithBlake2s;
+using security::signingWithBlake3;
+using security::signingWithHashChainSha256;
 
 } // namespace ndn
 

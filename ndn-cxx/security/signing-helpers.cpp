@@ -31,6 +31,18 @@ signingByIdentity(const Name& identityName)
 }
 
 SigningInfo
+signingByHashChainIdentity(const Name& identityName)
+{
+  return SigningInfo(SigningInfo::SIGNER_TYPE_HASHCHAIN_ID, identityName);
+}
+
+SigningInfo
+signingByHashChainIdentity(const Identity& identity)
+{
+  return SigningInfo(identity);
+}
+
+SigningInfo
 signingByIdentity(const Identity& identity)
 {
   return SigningInfo(identity);
@@ -64,6 +76,30 @@ SigningInfo
 signingWithSha256()
 {
   return SigningInfo(SigningInfo::SIGNER_TYPE_SHA256);
+}
+
+SigningInfo
+signingWithHashChainSha256()
+{
+  return SigningInfo(SigningInfo::SIGNER_TYPE_HASHCHAIN_SHA256);
+}
+
+// SigningInfo
+// signingWithHashCHainWithSha256()
+// {
+//   return SigningInfo(SigningInfo::get);
+// }
+
+SigningInfo
+signingWithBlake2s()
+{
+  return SigningInfo(SigningInfo::SIGNER_TYPE_BLAKE2S);
+}
+
+SigningInfo
+signingWithBlake3()
+{
+  return SigningInfo(SigningInfo::SIGNER_TYPE_BLAKE3);
 }
 
 } // namespace security

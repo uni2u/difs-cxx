@@ -38,7 +38,7 @@ class HCKeyChain : public KeyChain {
 public:
   HCKeyChain() : KeyChain() {};
 
-  HCKeyChain(const std::string& pibLocator, const std::string& tpmLocator, bool allowReset = false)
+  HCKeyChain(const std::string& pibLocator, const std::string& tpmLocator, bool allowReset = false) 
               : KeyChain(pibLocator, tpmLocator, allowReset) {};
 
   void

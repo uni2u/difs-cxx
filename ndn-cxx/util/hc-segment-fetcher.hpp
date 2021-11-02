@@ -62,7 +62,7 @@ public:
 private:
   HCSegmentFetcher(Face& face, security::v2::Validator& validator, const SegmentFetcher::Options& options);
 
-  void
+  void 
   afterValidationSuccess(const Data &data);
 
   void
@@ -87,7 +87,7 @@ private:
   std::shared_ptr<Block> before_signature;
   int before_segment;
   int success_count;
-};
+}; 
 
 }
 }
