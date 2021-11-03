@@ -31,27 +31,42 @@
 #include "ndn-cxx/security/safe-bag.hpp"
 #include "ndn-cxx/security/signing-info.hpp"
 #include "ndn-cxx/security/tpm/tpm.hpp"
+#include "ndn-cxx/util/logger.hpp"
 
 namespace ndn {
 namespace security {
+
+
 inline namespace v2{
+
+NDN_LOG_INIT(ndn.security.HCKeyChain);
 
 void
 printBlock(const Block& block)
 {
-  std::cout<< "size is :"<< std::dec <<block.value_size() << std::endl;
+  NDN_LOG_DEBUG("size is :"<< std::dec <<block.value_size());
   for(int i = 0; i < block.value_size(); i++) {
-    std::cout <<std::hex<<(unsigned)block.wire()[i]<<" ";
+    NDN_LOG_DEBUG(std::hex<<(unsigned)block.wire()[i]<<" ");
   }
-  std::cout<<std::endl;
 }
 
 void
 HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &params) {
-  std::cout<<"hckeychain::sign:"<<params.getSignerType()<<params.getSignerName().toUri()<<std::endl;
+  NDN_LOG_INFO("HCKeyChain::sign");
+  NDN_LOG_DEBUG("HCKeyChain::sign:"<<params.getSignerType()<<params.getSignerName().toUri());
   printBlock(nextHash);
   auto signatureInfo = data.getSignatureInfo();
   signatureInfo.setNextHash(nextHash);
+  if(signatureInfo.getSignatureType() == ndn::tlv::SignatureHashChainWithSha256) {
+    NDN_LOG_DEBUG("HCKeyChain::sign SignatureHashChainWithSha256");
+    signatureInfo.setKeyLocator(Name("/localhost/identity/digest-sha256"));
+  } else {
+    pib::Identity identity;
+    // identity = params.getPibIdentity();
+    // pib::Key key = identity.getDefaultKey();
+    signatureInfo.setKeyLocator(Name("example/repo/KEY/%E3~a%18%CB%25%04%B2"));
+     NDN_LOG_DEBUG("HCKeyChain::sign NOT SignatureHashChainWithSha256");
+  }
   // signatureInfo.setTime(time::system_clock::time_point(1590169108480_ms));
   // optional<time::system_clock::time_point> tmp = signatureInfo.getTime();
   // if(tmp != nullopt) {
@@ -67,6 +82,10 @@ HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &para
   // std::cout<<"second:"<<std::endl;
   // printBlock(data.getSignatureInfo().getNextHash().value());
 
+  KeyChain::sign(data, params);
+}
+void
+HCKeyChain::sign(Data &data, const SigningInfo &params) {
   KeyChain::sign(data, params);
 }
 }
