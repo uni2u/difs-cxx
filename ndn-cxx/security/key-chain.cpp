@@ -640,7 +640,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_ID: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_ID"<<std::endl;
+    
       identity = params.getPibIdentity();
       if (!identity) {
         try {
@@ -654,7 +654,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_HASHCHAIN_ID: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_HASHCHAIN_ID"<<std::endl;
+      
       identity = params.getPibIdentity();
       std::cout<<"SigningInfo::1"<<std::endl;
       if (!identity) {
@@ -688,7 +688,7 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       return std::make_tuple(key.getName(), sigInfo);
     }    
     case SigningInfo::SIGNER_TYPE_KEY: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_KEY"<<std::endl;
+      
       key = params.getPibKey();
       if (!key) {
         Name identityName = extractIdentityFromKeyName(params.getSignerName());
