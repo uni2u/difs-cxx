@@ -464,7 +464,6 @@ KeyChain::sign(Data& data, const SigningInfo& params)
   std::tie(keyName, sigInfo) = prepareSignatureInfo(params);
 
   if(data.getSignatureInfo().hasNextHash()) {
-    std::cout<<"params.getSignatureInfo().hasNextHash()"<<std::endl;
     sigInfo.setNextHash(data.getSignatureInfo().getNextHash());
   }
   data.setSignatureInfo(sigInfo);
@@ -703,7 +702,6 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_CERT: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_CERT"<<std::endl;
       Name identityName = extractIdentityFromCertName(params.getSignerName());
       Name keyName = extractKeyNameFromCertName(params.getSignerName());
       try {
@@ -717,7 +715,6 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       break;
     }
     case SigningInfo::SIGNER_TYPE_SHA256: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_SHA256"<<std::endl;
       sigInfo.setSignatureType(tlv::DigestSha256);
       NDN_LOG_TRACE("Prepared signature info: " << sigInfo);
       return std::make_tuple(SigningInfo::getDigestSha256Identity(), sigInfo);
@@ -743,7 +740,6 @@ KeyChain::prepareSignatureInfo(const SigningInfo& params)
       return std::make_tuple(SigningInfo::getDigestBlake3Identity(), sigInfo);
     }
     case SigningInfo::SIGNER_TYPE_HASHCHAIN_SHA256: {
-      std::cout<<"SigningInfo::SIGNER_TYPE_SHA256"<<std::endl;
       //sigInfo.setNextHash(params.getSignatureInfo().getNextHash());
       sigInfo.setSignatureType(tlv::SignatureHashChainWithSha256);
       // sigInfo.setSignatureType(tlv::DigestSha256);
