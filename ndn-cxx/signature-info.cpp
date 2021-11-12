@@ -214,18 +214,18 @@ SignatureInfo::setKeyLocator(optional<KeyLocator> keyLocator)
 optional<Block>
 SignatureInfo::getNextHash() const
 {
-  std::cout<<"getNexthash started..."<< std::endl;
+  //std::cout<<"getNexthash started..."<< std::endl;
   auto it = findOtherTlv(tlv::NextHashValue);
-  std::cout<<"getNexthash after findOtherTLv..."<< std::endl;
+  //std::cout<<"getNexthash after findOtherTLv..."<< std::endl;
   if(it == m_otherTlvs.end()) {
-    std::cout<<"getNextHash none"<<std::endl;
+    //std::cout<<"getNextHash none"<<std::endl;
     return nullopt;
   }
   // if (it->size() <= 2) {
   //   std::cout<<"getNextHash size 2"<<std::endl;
   //   return nullopt;
   // }
-  std::cout<<"getNextHash successful"<<std::endl;
+  //std::cout<<"getNextHash successful"<<std::endl;
   return static_cast<Block>(*it);
 }
 
@@ -235,12 +235,12 @@ SignatureInfo::setNextHash(optional<Block> nextHash)
   if(!nextHash) {
     removeCustomTlv(tlv::NextHashValue);
   }
-  std::cout<<"m_otherTlvs size before:"<<m_otherTlvs.size()<<std::endl;
+  //std::cout<<"m_otherTlvs size before:"<<m_otherTlvs.size()<<std::endl;
   if(nextHash == nullopt) {
-    std::cout<<"setNextHash none"<<std::endl;
+    //std::cout<<"setNextHash none"<<std::endl;
     return *this;
   }
-  std::cout<<"setNextHash found: "<<nextHash.has_value()<<std::endl;
+  //std::cout<<"setNextHash found: "<<nextHash.has_value()<<std::endl;
   //nextHash.value().resetWire();
   addCustomTlv(nextHash.value());
 
