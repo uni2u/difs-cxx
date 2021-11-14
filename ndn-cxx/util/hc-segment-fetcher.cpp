@@ -102,7 +102,8 @@ void
 printBlock(const Block& block)
 {
   std::cout<< "size is :"<< std::dec <<block.value_size() << std::endl;
-  for(int i = 0; i < block.value_size(); i++) {
+  for(int i = 0; i < block.value_size() + 4; i++) {
+    // std::cout <<std::hex<<(unsigned)block.value_begin()[i]<<" ";
     std::cout <<std::hex<<(unsigned)block.wire()[i]<<" ";
   }
   std::cout<<std::endl;
@@ -125,9 +126,11 @@ HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
   //std::cout<< "before_segment"<<before_segment<< std::endl;
   if (segment != 0) {
     if (segment - 1 == before_segment) {
+
       //std::cout<< "3"<< std::endl;
-      if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size())) {
+      if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size()+4)) {
         //std::cout<< "3.1"<< std::endl;
+
         //onError(HASHCHAIN_ERROR, "Failure hash key error");
         afterSegmentValidated(data);
       } else {
