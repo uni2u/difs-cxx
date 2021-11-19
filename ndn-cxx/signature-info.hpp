@@ -134,8 +134,12 @@ public: // field access
   bool
   hasNextHash() const noexcept
   {
-    
-    return !m_otherTlvs.empty();
+    auto it = findOtherTlv(tlv::NextHashValue);
+
+    if(it == m_otherTlvs.end()) {
+      return false;
+    }
+    return true;
   }
 
   /** @brief Get KeyLocator

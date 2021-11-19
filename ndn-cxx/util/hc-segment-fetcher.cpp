@@ -101,10 +101,34 @@ HCSegmentFetcher::start(Face &face,
 void
 printBlock(const Block& block)
 {
-  std::cout<< "size is :"<< std::dec <<block.value_size() << std::endl;
+  std::cout<< "size is :"<< std::dec <<block.value_size() << "printBlock"<<std::endl;
   for(int i = 0; i < block.value_size() + 4; i++) {
     // std::cout <<std::hex<<(unsigned)block.value_begin()[i]<<" ";
-    std::cout <<std::hex<<(unsigned)block.wire()[i]<<" ";
+    std::cout << std::hex<<(unsigned)block.wire()[i]<<" ";
+  }
+  std::cout<<std::endl;
+}
+
+uint8_t*
+copyBlock(const Block& block,int shaper)
+{
+  uint8_t* new_sig = new uint8_t[32];
+  // std::cout<< "size is :"<< std::dec <<block.value_size() <<std::endl;
+  for(int i = 0; i < block.value_size(); i++) {
+    // std::cout <<std::hex<<(unsigned)block.value_begin()[i]<<" ";
+    new_sig[i] = block.wire()[i+shaper];
+    //std::cout <<std::hex<<(unsigned)block.wire()[i+shaper]<<" ";
+  }
+  return new_sig;
+}
+
+void
+printValues(const uint8_t* values)
+{
+  std::cout<< "size is :"<< std::dec <<32<<"printValues"<< std::endl;
+  for(int i = 0; i < 32; i++) {
+    // std::cout <<std::hex<<(unsigned)block.value_begin()[i]<<" ";
+    std::cout << std::hex<<(unsigned)values[i]<<" ";
   }
   std::cout<<std::endl;
 }
@@ -120,18 +144,32 @@ HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
 
   //if(false) {
   //std::cout<< "1"<< std::endl;
-  if(data.getSignatureType() == tlv::SignatureSha256WithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256) {
+  if(data.getSignatureInfo().hasNextHash() && (data.getSignatureType() == tlv::SignatureSha256WithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256)) {
   int segment = data.getName().get(-1).toSegment();
 
-  //std::cout<< "before_segment"<<before_segment<< std::endl;
+  auto myblock = data.getSignatureInfo().getNextHash().value();
+  uint8_t* signatureNextHash;
+  // memcpy((void*)signatureNextHash, (void*)(myblock.value_begin().base()), 32);
+  signatureNextHash = copyBlock(myblock,4);
+  // printBlock(myblock);
+  // printValues(signatureNextHash);
+
+  auto mysig = data.getSignatureValue();
+  uint8_t* signatureBytes;
+  // memcpy((void*)signatureBytes, (void*)((mysig.value_begin().base())), 32);
+  signatureBytes = copyBlock(mysig,2);
+  // printBlock(mysig);
+  // printValues(signatureBytes);
+
   if (segment != 0) {
     if (segment - 1 == before_segment) {
 
       //std::cout<< "3"<< std::endl;
-      if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size()+4)) {
+      // if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size()+4)) {
+        if(before_signature != nullptr && memcmp((void*)signatureBytes, (void*)before_signature, data.getSignatureValue().value_size())) {
         //std::cout<< "3.1"<< std::endl;
 
-        //onError(HASHCHAIN_ERROR, "Failure hash key error");
+        onError(HASHCHAIN_ERROR, "Failure hash key error");
         afterSegmentValidated(data);
       } else {
         //std::cout<< "4"<< std::endl;
@@ -139,11 +177,11 @@ HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
         afterSegmentValidated(data);
       }
     } else {
-      //std::cout<< "5"<< std::endl;
+      //This passes segment when a segment comes not in order.
       afterSegmentValidated(data);
     }
   } else {
-    //std::cout<< "6"<< std::endl;
+    //This falls for the first segment.
     success_count++;
     afterSegmentValidated(data);
   }
@@ -152,16 +190,19 @@ HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
   int finalBlockId = data.getFinalBlock().value().toSegment();
   if (segment == finalBlockId) {
     if (success_count < finalBlockId / 2) {
-      onError(HASHCHAIN_ERROR, "Failure hash key error");
+      std::cout << "Failure hash key error"<<std::endl;
+      std::cout << "success_count:"<<success_count << std::endl;
+      std::cout << "segment:"<<segment << std::endl;
+      std::cout << "finalBlockId:"<<finalBlockId << std::endl;
+      //onError(HASHCHAIN_ERROR, "Failure hash key error");
     }
   }
   //std::cout<< "8"<< std::endl;
-  
   before_segment = segment;
-  optional<Block> previousHash = data.getSignatureInfo().getNextHash();
-  //std::cout<< "---getnexthash----: "<< data.getSignatureType()<<std::endl;
-  if(previousHash != nullopt) {
-    before_signature = std::make_shared<Block>(previousHash.value());
+  // optional<Block> previousHash = data.getSignatureInfo().getNextHash();
+  
+  if(signatureNextHash != nullptr) {
+    before_signature = signatureNextHash;
     //std::cout<< "previousHash: "<< std::endl;
     //printBlock(data.getSignatureInfo().getNextHash().value());
   } else {
@@ -172,7 +213,6 @@ HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
   //before_signature = std::make_shared<Block>(data.getMetaInfo().getAppMetaInfo().front());
   } 
   else {
-    //std::cout<< "else "<< std::endl;
     afterSegmentValidated(data);
   }
 }
