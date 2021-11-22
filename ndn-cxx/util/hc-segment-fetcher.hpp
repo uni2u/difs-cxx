@@ -84,7 +84,7 @@ public:
 private:
   std::map<int, std::shared_ptr<Block>> nextHash_map;
   std::map<int, std::shared_ptr<Data>> data_map;
-  uint8_t* before_signature;
+  uint8_t* before_signature = nullptr;
   int before_segment;
   int success_count;
 }; 
