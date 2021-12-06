@@ -2,6 +2,7 @@
 #include <iostream>
 #include <unistd.h>
 #include "ndn-cxx/util/string-helper.hpp"
+#include <boost/thread.hpp>
 
 namespace ndn {
 namespace util {
