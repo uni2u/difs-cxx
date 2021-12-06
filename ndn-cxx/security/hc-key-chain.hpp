@@ -30,6 +30,7 @@
 #include "ndn-cxx/security/signing-info.hpp"
 #include "ndn-cxx/security/tpm/tpm.hpp"
 #include "ndn-cxx/security/key-chain.hpp"
+#include <ndn-cxx/util/segment-fetcher.hpp>
 
 namespace ndn {
 namespace security {
@@ -41,6 +42,8 @@ public:
   HCKeyChain(const std::string& pibLocator, const std::string& tpmLocator, bool allowReset = false) 
               : KeyChain(pibLocator, tpmLocator, allowReset) {};
 
+  std::vector<shared_ptr<Data>>
+  makeHashChain(const ndn::Name versionedPrefix, std::istream& is, const size_t maxSegmentSize, const SigningInfo& signingInfo);
   void
   sign(Data &data, const ndn::Block &nextHash, const SigningInfo& params = SigningInfo());
   void

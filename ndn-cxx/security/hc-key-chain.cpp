@@ -32,6 +32,8 @@
 #include "ndn-cxx/security/signing-info.hpp"
 #include "ndn-cxx/security/tpm/tpm.hpp"
 #include "ndn-cxx/util/logger.hpp"
+#include <ndn-cxx/util/segment-fetcher.hpp>
+#include "ndn-cxx/security/signing-helpers.hpp"
 
 namespace ndn {
 namespace security {
@@ -50,6 +52,61 @@ printBlock(const Block& block)
   }
 }
 
+std::vector<shared_ptr<Data>>
+HCKeyChain::makeHashChain(const ndn::Name m_versionedPrefix, std::istream& is, const size_t maxSegmentSize, const SigningInfo& signingInfo){
+
+  std::vector<shared_ptr<Data>> m_store;
+
+  time::milliseconds freshnessPeriod{10000};
+
+  BOOST_ASSERT(m_store.empty());
+
+
+  std::vector<uint8_t> buffer(maxSegmentSize - 32);
+  while (is.good()) {
+    is.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
+    const auto nCharsRead = is.gcount();
+
+    if (nCharsRead > 0) {
+      auto data = make_shared<Data>(Name(m_versionedPrefix).appendSegment(m_store.size()));
+      data->setFreshnessPeriod(freshnessPeriod);
+      data->setContent(buffer.data(), static_cast<size_t>(nCharsRead));
+      m_store.push_back(data);
+    }
+  }
+
+  if (m_store.empty()) {
+    auto data = make_shared<Data>(Name(m_versionedPrefix).appendSegment(0));
+    data->setFreshnessPeriod(freshnessPeriod);
+    m_store.push_back(data);
+  }
+
+  auto finalBlockId = name::Component::fromSegment(m_store.size() - 1);
+  // for (const auto& data : m_store) {
+  static uint8_t zeros[32] = {0,0,0,0,0,0,0,0,0,0,
+                      0,0,0,0,0,0,0,0,0,0,
+                      0,0,0,0,0,0,0,0,0,0,
+                      0,0};
+
+  Block nextHash = ndn::encoding::makeBinaryBlock(tlv::NextHashValue, zeros, 32);
+  Name tmp = Name(signingInfo.getSignerName());
+
+  for (auto it = m_store.rbegin(); it != m_store.rend(); it++) {
+    Data& data = **it;
+    data.setFinalBlock(finalBlockId);
+    if (it == m_store.rend() - 1 /* First block */) {
+      sign(data, nextHash, ndn::signingByHashChainIdentity(tmp));
+    } else {
+      sign(data, nextHash, ndn::security::SigningInfo(ndn::security::SigningInfo::SIGNER_TYPE_HASHCHAIN_SHA256));
+    }
+    // std::cout << "data.content type: " << data.getContent().type() << std::endl;
+    nextHash = ndn::encoding::makeBinaryBlock(tlv::NextHashValue, data.getSignatureValue().value(), data.getSignatureValue().value_size());
+  }
+
+  return m_store;
+
+}
+
 void
 HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &params) {
   NDN_LOG_INFO("HCKeyChain::sign");
@@ -57,30 +114,8 @@ HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &para
   printBlock(nextHash);
   auto signatureInfo = data.getSignatureInfo();
   signatureInfo.setNextHash(nextHash);
-  //if(signatureInfo.getSignatureType() == ndn::tlv::SignatureHashChainWithSha256) {
-  //  NDN_LOG_DEBUG("HCKeyChain::sign SignatureHashChainWithSha256");
-  //  signatureInfo.setKeyLocator(Name("/localhost/identity/digest-sha256"));
-  //} else {
-  //  pib::Identity identity;
-    // identity = params.getPibIdentity();
-    // pib::Key key = identity.getDefaultKey();
-  //  signatureInfo.setKeyLocator(Name("example/repo/KEY/%E3~a%18%CB%25%04%B2"));
-  //   NDN_LOG_DEBUG("HCKeyChain::sign NOT SignatureHashChainWithSha256");
-  //}
-  // signatureInfo.setTime(time::system_clock::time_point(1590169108480_ms));
-  // optional<time::system_clock::time_point> tmp = signatureInfo.getTime();
-  // if(tmp != nullopt) {
-  //   std::cout<<"getTime"<< tmp.value().time_since_epoch().count() <<std::endl;
-  // } else {
-  //   std::cout<<"gettime null"<<std::endl;
-  //}
-  // auto metaInfo = data.getMetaInfo();
-  // metaInfo.addAppMetaInfo(nextHash);
 
-  // data.setMetaInfo(metaInfo);
   data.setSignatureInfo(signatureInfo);
-  // std::cout<<"second:"<<std::endl;
-  // printBlock(data.getSignatureInfo().getNextHash().value());
 
   KeyChain::sign(data, params);
 }
