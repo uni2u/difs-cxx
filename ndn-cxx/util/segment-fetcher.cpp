@@ -274,6 +274,8 @@ SegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origInt
   // Remove from pending segments map
   m_pendingSegments.erase(pendingSegmentIt);
 
+  // Copy data 
+  m_dataBuffer.emplace(currentSegment, data);
   // Copy data in segment to temporary buffer
   auto receivedSegmentIt = m_segmentBuffer.emplace(std::piecewise_construct,
                                                    std::forward_as_tuple(currentSegment),
@@ -425,6 +427,7 @@ SegmentFetcher::finalizeFetch()
       buf.write(m_segmentBuffer[i].get<const char>(), m_segmentBuffer[i].size());
     }
     onComplete(buf.buf());
+    onHashChainComplete(m_dataBuffer);
   }
   stop();
 }

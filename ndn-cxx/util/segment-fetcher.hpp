@@ -286,6 +286,9 @@ public:
    */
   Signal<SegmentFetcher> onInOrderComplete;
 
+
+  Signal<SegmentFetcher, std::map<uint64_t, Data>> onHashChainComplete;
+
 private:
   enum class SegmentState {
     FirstInterest, ///< the first Interest for this segment has been sent
@@ -331,7 +334,8 @@ NDN_CXX_PUBLIC_WITH_TESTS_ELSE_PRIVATE:
   std::map<uint64_t, Buffer> m_segmentBuffer;
   std::map<uint64_t, PendingSegment> m_pendingSegments;
   std::set<uint64_t> m_receivedSegments;
-  
+  std::map<uint64_t, Data> m_dataBuffer;
+
   ndn::Block nextHash;
 };
 

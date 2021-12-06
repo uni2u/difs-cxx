@@ -29,6 +29,7 @@
 #include "ndn-cxx/util/scheduler.hpp"
 #include "ndn-cxx/util/signal.hpp"
 
+#include <map>
 
 namespace ndn {
 namespace util {
@@ -68,6 +69,9 @@ private:
   void
   randAfterValidationSuccess(const Data &data);
 
+  void
+  afterHashChainCompleted(const std::map<uint64_t, Data>& dataBuffer);
+
 public:
   shared_ptr<SegmentFetcher> m_fetcher;
 
@@ -80,6 +84,7 @@ public:
   Signal<HCSegmentFetcher, Data> afterSegmentValidated;
   Signal<HCSegmentFetcher> afterSegmentTimedOut;
   Signal<HCSegmentFetcher, uint32_t, std::string> onError;
+  Signal<HCSegmentFetcher, std::map<uint64_t, Data>> onHashChainComplete;
 
 private:
   std::map<int, std::shared_ptr<Block>> nextHash_map;

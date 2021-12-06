@@ -50,6 +50,9 @@ HCSegmentFetcher::start(Face &face,
   m_fetcher->onError.connect([hc_fetcher] (uint32_t errorCode, const std::string& errorMsg)
                                          { hc_fetcher->onError(errorCode, errorMsg);
                                          });
+    m_fetcher->onHashChainComplete.connect([hc_fetcher] (const std::map<uint64_t, Data>& dataBuffer)
+                                         { hc_fetcher->afterHashChainCompleted(dataBuffer);
+                                         });
 
   hc_fetcher->m_fetcher = m_fetcher;
 
@@ -134,6 +137,10 @@ printValues(const uint8_t* values)
   std::cout<<std::endl;
 }
 
+void
+HCSegmentFetcher::afterHashChainCompleted(const std::map<uint64_t, Data>& dataBuffer) {
+  onHashChainComplete(dataBuffer);
+}
 
 void 
 HCSegmentFetcher::randAfterValidationSuccess(const Data& data) {
