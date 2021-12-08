@@ -88,7 +88,7 @@ SegmentFetcher::start(Face& face,
 }
 
 void
-SegmentFetcher::stop()
+SegmentFetcher:: stop()
 {
   if (!m_this) {
     return;
@@ -275,13 +275,20 @@ SegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origInt
   m_pendingSegments.erase(pendingSegmentIt);
 
   // Copy data 
-  m_dataBuffer.emplace(currentSegment, data);
+  auto receivedDataIt = m_dataBuffer.emplace(std::piecewise_construct,
+                                            std::forward_as_tuple(currentSegment),
+                                            std::forward_as_tuple(data));
+  // std::copy(data.wireEncode().value_begin(), data.wireEncode().value_end(),
+  //         receivedDataIt.first->second.get()->shared_from_this().get());
+
   // Copy data in segment to temporary buffer
   auto receivedSegmentIt = m_segmentBuffer.emplace(std::piecewise_construct,
                                                    std::forward_as_tuple(currentSegment),
                                                    std::forward_as_tuple(data.getContent().value_size()));
+
   std::copy(data.getContent().value_begin(), data.getContent().value_end(),
             receivedSegmentIt.first->second.begin());
+
   m_nBytesReceived += data.getContent().value_size();
   afterSegmentValidated(data);
 
@@ -300,6 +307,7 @@ SegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origInt
   if (m_options.inOrder && m_nextSegmentInOrder == currentSegment) {
     do {
       onInOrderData(std::make_shared<const Buffer>(m_segmentBuffer[m_nextSegmentInOrder]));
+      m_dataBuffer.erase(m_nextSegmentInOrder);
       m_segmentBuffer.erase(m_nextSegmentInOrder++);
     } while (m_segmentBuffer.count(m_nextSegmentInOrder) > 0);
   }
@@ -426,8 +434,9 @@ SegmentFetcher::finalizeFetch()
     for (int64_t i = 0; i < m_nSegments; i++) {
       buf.write(m_segmentBuffer[i].get<const char>(), m_segmentBuffer[i].size());
     }
-    onComplete(buf.buf());
     onHashChainComplete(m_dataBuffer);
+    onComplete(buf.buf());
+    
   }
   stop();
 }

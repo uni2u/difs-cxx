@@ -60,9 +60,9 @@ public:
   void
   stop();
 
-private:
+public://private
   HCSegmentFetcher(Face& face, security::v2::Validator& validator, const SegmentFetcher::Options& options);
-
+private:
   void 
   afterValidationSuccess(const Data &data);
 
@@ -87,8 +87,8 @@ public:
   Signal<HCSegmentFetcher, std::map<uint64_t, Data>> onHashChainComplete;
 
 private:
-  std::map<int, std::shared_ptr<Block>> nextHash_map;
-  std::map<int, std::shared_ptr<Data>> data_map;
+  //std::map<int, std::shared_ptr<Block>> nextHash_map;
+  //std::map<int, std::shared_ptr<Data>> data_map;
   uint8_t* before_signature = nullptr;
   int before_segment;
   int success_count;

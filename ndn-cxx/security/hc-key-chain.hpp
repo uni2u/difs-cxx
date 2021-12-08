@@ -37,13 +37,23 @@ namespace security {
 inline namespace v2{
 class HCKeyChain : public KeyChain {
 public:
+  struct Options
+  {
+    security::SigningInfo signingInfo;
+    time::milliseconds freshnessPeriod{10000};
+    size_t maxSegmentSize = MAX_NDN_PACKET_SIZE >> 1;
+    bool isQuiet = false;
+    bool isVerbose = false;
+    bool wantShowVersion = false;
+  };
+
   HCKeyChain() : KeyChain() {};
 
   HCKeyChain(const std::string& pibLocator, const std::string& tpmLocator, bool allowReset = false) 
               : KeyChain(pibLocator, tpmLocator, allowReset) {};
 
   std::vector<shared_ptr<Data>>
-  makeHashChain(const ndn::Name versionedPrefix, std::istream& is, const size_t maxSegmentSize, const SigningInfo& signingInfo);
+  makeHashChain(const ndn::Name versionedPrefix, std::istream& is, const Options& options);
   void
   sign(Data &data, const ndn::Block &nextHash, const SigningInfo& params = SigningInfo());
   void

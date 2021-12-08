@@ -53,7 +53,7 @@ printBlock(const Block& block)
 }
 
 std::vector<shared_ptr<Data>>
-HCKeyChain::makeHashChain(const ndn::Name m_versionedPrefix, std::istream& is, const size_t maxSegmentSize, const SigningInfo& signingInfo){
+HCKeyChain::makeHashChain(const ndn::Name m_versionedPrefix, std::istream& is, const Options& options){
 
   std::vector<shared_ptr<Data>> m_store;
 
@@ -62,7 +62,7 @@ HCKeyChain::makeHashChain(const ndn::Name m_versionedPrefix, std::istream& is, c
   BOOST_ASSERT(m_store.empty());
 
 
-  std::vector<uint8_t> buffer(maxSegmentSize - 32);
+  std::vector<uint8_t> buffer(options.maxSegmentSize - 32);
   while (is.good()) {
     is.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
     const auto nCharsRead = is.gcount();
@@ -89,7 +89,7 @@ HCKeyChain::makeHashChain(const ndn::Name m_versionedPrefix, std::istream& is, c
                       0,0};
 
   Block nextHash = ndn::encoding::makeBinaryBlock(tlv::NextHashValue, zeros, 32);
-  Name tmp = Name(signingInfo.getSignerName());
+  Name tmp = Name(options.signingInfo.getSignerName());
 
   for (auto it = m_store.rbegin(); it != m_store.rend(); it++) {
     Data& data = **it;
