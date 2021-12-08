@@ -275,9 +275,7 @@ SegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origInt
   m_pendingSegments.erase(pendingSegmentIt);
 
   // Copy data 
-  auto receivedDataIt = m_dataBuffer.emplace(std::piecewise_construct,
-                                            std::forward_as_tuple(currentSegment),
-                                            std::forward_as_tuple(data));
+  m_dataBuffer.emplace(currentSegment, data);
   // std::copy(data.wireEncode().value_begin(), data.wireEncode().value_end(),
   //         receivedDataIt.first->second.get()->shared_from_this().get());
 
@@ -380,6 +378,7 @@ SegmentFetcher::afterTimeoutCb(const Interest& origInterest,
   BOOST_ASSERT(m_nSegmentsInFlight > 0);
   m_nSegmentsInFlight--;
   afterNackOrTimeout(origInterest);
+
 }
 
 void
@@ -434,7 +433,7 @@ SegmentFetcher::finalizeFetch()
     for (int64_t i = 0; i < m_nSegments; i++) {
       buf.write(m_segmentBuffer[i].get<const char>(), m_segmentBuffer[i].size());
     }
-    onHashChainComplete(m_dataBuffer);
+    onHashChainComplete(std::make_shared<std::map<uint64_t, Data>>(m_dataBuffer));
     onComplete(buf.buf());
     
   }

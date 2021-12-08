@@ -52,8 +52,8 @@ HCSegmentFetcher::start(Face &face,
   m_fetcher->onError.connect([hc_fetcher] (uint32_t errorCode, const std::string& errorMsg)
                                          { hc_fetcher->onError(errorCode, errorMsg);
                                          });
-    m_fetcher->onHashChainComplete.connect([hc_fetcher] (const std::map<uint64_t, Data>& dataBuffer)
-                                         { hc_fetcher->afterHashChainCompleted(dataBuffer);
+    m_fetcher->onHashChainComplete.connect([hc_fetcher] (const shared_ptr<std::map<uint64_t, Data>>& dataBufferPtr)
+                                         { hc_fetcher->afterHashChainCompleted(dataBufferPtr);
                                          });
 
   hc_fetcher->m_fetcher = m_fetcher;
@@ -98,12 +98,12 @@ printValues(const uint8_t* values)
 }
 
 void
-HCSegmentFetcher::afterHashChainCompleted(const std::map<uint64_t, Data>& dataBuffer) {
+HCSegmentFetcher::afterHashChainCompleted(const shared_ptr<std::map<uint64_t, Data>>& dataBufferPtr) {
   std::cout<<"HCSegmentFetcher::afterHashChainCompleted"<<std::endl;
-  for (auto const& x : dataBuffer)
+  for (auto const& x : *dataBufferPtr.get())
   {
     auto data = x.second;
-    std::cout<<"HCSegmentFetcher::afterHashChainCompleted"<<data.getContent()<<std::endl;
+    //std::cout<<"HCSegmentFetcher::afterHashChainCompleted"<<data.getContent()<<std::endl;
 
     Name seqNo = data.getName().getSubName(-1);
 
@@ -172,7 +172,7 @@ HCSegmentFetcher::afterHashChainCompleted(const std::map<uint64_t, Data>& dataBu
       }
   }
   
-  onHashChainComplete(dataBuffer);
+  onHashChainComplete(dataBufferPtr);
 }
 
 void 

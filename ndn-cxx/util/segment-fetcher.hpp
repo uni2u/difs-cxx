@@ -287,7 +287,7 @@ public:
   Signal<SegmentFetcher> onInOrderComplete;
 
 
-  Signal<SegmentFetcher, std::map<uint64_t, Data>> onHashChainComplete;
+  Signal<SegmentFetcher, shared_ptr<std::map<uint64_t, Data>>> onHashChainComplete;
 
 private:
   enum class SegmentState {
