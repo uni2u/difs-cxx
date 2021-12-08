@@ -275,7 +275,7 @@ SegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origInt
   m_pendingSegments.erase(pendingSegmentIt);
 
   // Copy data 
-  m_dataBuffer.emplace(currentSegment, data);
+  m_dataBuffer.insert(std::make_pair(currentSegment, data));
   // std::copy(data.wireEncode().value_begin(), data.wireEncode().value_end(),
   //         receivedDataIt.first->second.get()->shared_from_this().get());
 
