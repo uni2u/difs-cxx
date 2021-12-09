@@ -107,6 +107,8 @@ public:
     NACK_ERROR = 4,
     /// A received FinalBlockId did not contain a segment component
     FINALBLOCKID_NOT_SEGMENT = 5,
+    // 
+    HASHCHAIN_ERROR = 6,
   };
 
   class Options

@@ -444,7 +444,7 @@ HCSegmentFetcher::verifyHashChain() {
           
             delete[] before_signature;
             //====labry error
-            //onError(HASHCHAIN_ERROR, "Failure hash key error");
+            signalError(HASHCHAIN_ERROR, "Failure hash key error");
             //afterSegmentValidated(data);
           } else {
             //std::cout<< "4"<< std::endl;
