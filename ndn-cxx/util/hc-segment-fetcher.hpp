@@ -185,6 +185,9 @@ private:
   void
   verifyHashChain();
 
+  bool
+  verifyHashChainData(const Data& data);
+
   void
   fetchFirstSegment(const Interest& baseInterest, bool isRetransmission);
 
@@ -293,6 +296,11 @@ public:
 
 
   Signal<HCSegmentFetcher, shared_ptr<std::map<uint64_t, Data>>> onHashChainComplete;
+
+  /**
+   * @brief Emitted whenever a received data segment has been successfully validated.
+   */
+  Signal<HCSegmentFetcher, shared_ptr<Data>> onInOrderVerifiedHashChainData;
 
 private:
   enum class SegmentState {
