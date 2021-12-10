@@ -30,9 +30,12 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptor/map.hpp>
+#include <boost/thread.hpp>
+#include <boost/bind.hpp>
 
 #include <cmath>
 #include <iostream>
+
 
 //#include "ndn-cxx/hash-data.hpp"
 
@@ -255,6 +258,7 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
   if (shouldStop(weakSelf))
     return;
 
+  boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
   // We update the last receive time here instead of in the segment received callback so that the
   // transfer will not fail to terminate if we only received invalid Data packets.
   m_timeLastSegmentReceived = time::steady_clock::now();
@@ -281,12 +285,13 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
   //         receivedDataIt.first->second.get()->shared_from_this().get());
 
   // Copy data in segment to temporary buffer
+ 
   auto receivedSegmentIt = m_segmentBuffer.emplace(std::piecewise_construct,
                                                    std::forward_as_tuple(currentSegment),
-                                                   std::forward_as_tuple(data.getContent().value_size()));
+                                                   std::forward_as_tuple(*data.getContent().getBuffer()));
 
-  std::copy(data.getContent().value_begin(), data.getContent().value_end(),
-            receivedSegmentIt.first->second.begin());
+  // std::copy(data.getContent().value_begin(), data.getContent().value_end(),
+  //           receivedSegmentIt.first->second.begin());
 
   m_nBytesReceived += data.getContent().value_size();
   afterSegmentValidated(data);
@@ -595,7 +600,8 @@ HCSegmentFetcher::finalizeFetch()
       buf.write(m_segmentBuffer[i].get<const char>(), m_segmentBuffer[i].size());
     }
     //
-    verifyHashChain();
+    workers.create_thread(boost::bind(&HCSegmentFetcher::verifyHashChain, this));
+    workers.join_all();
     onHashChainComplete(std::make_shared<std::map<uint64_t, Data>>(m_dataBuffer));
     onComplete(buf.buf());
     

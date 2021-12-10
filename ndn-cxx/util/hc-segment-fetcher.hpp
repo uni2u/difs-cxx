@@ -28,6 +28,10 @@
 #include "ndn-cxx/util/scheduler.hpp"
 #include "ndn-cxx/util/signal.hpp"
 
+#include <boost/thread.hpp>
+#include <boost/bind.hpp>
+#include <boost/thread/mutex.hpp>
+
 #include <queue>
 #include <set>
 
@@ -350,11 +354,13 @@ NDN_CXX_PUBLIC_WITH_TESTS_ELSE_PRIVATE:
   std::map<uint64_t, Data> m_dataBuffer;
 
 private:
+  boost::thread_group workers;
   //std::map<int, std::shared_ptr<Block>> nextHash_map;
   //std::map<int, std::shared_ptr<Data>> data_map;
   uint8_t* before_signature = nullptr;
   int before_segment;
   int success_count;
+  boost::mutex io_mutex; 
 };
 
 } // namespace util
