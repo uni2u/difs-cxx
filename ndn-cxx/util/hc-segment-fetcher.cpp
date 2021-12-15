@@ -292,7 +292,10 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
  
   auto receivedSegmentIt = m_segmentBuffer.emplace(std::piecewise_construct,
                                                    std::forward_as_tuple(currentSegment),
-                                                   std::forward_as_tuple(*data.getContent().getBuffer()));
+                                                   std::forward_as_tuple(data.getContent().value_size()));
+
+  std::copy(data.getContent().value_begin(), data.getContent().value_end(),
+            receivedSegmentIt.first->second.begin());
 
   // std::copy(data.getContent().value_begin(), data.getContent().value_end(),
   //           receivedSegmentIt.first->second.begin());
