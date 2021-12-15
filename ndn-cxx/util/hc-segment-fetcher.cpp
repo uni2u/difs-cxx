@@ -36,6 +36,8 @@
 #include <cmath>
 #include <iostream>
 
+#include <stdlib.h>
+
 
 //#include "ndn-cxx/hash-data.hpp"
 
@@ -284,7 +286,7 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
   m_pendingSegments.erase(pendingSegmentIt);
 
   // Copy data 
-  m_dataBuffer.emplace(currentSegment, data);
+  //m_dataBuffer.emplace(currentSegment, data);
   // std::copy(data.wireEncode().value_begin(), data.wireEncode().value_end(),
   //         receivedDataIt.first->second.get()->shared_from_this().get());
 
@@ -318,13 +320,13 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
   if(m_options.inOrder) {
     if (m_nextSegmentInOrder == currentSegment) {
       do {
-        if(verifyHashChainData(m_dataBuffer[m_nextSegmentInOrder])){
-          onInOrderVerifiedHashChainData(std::make_shared<Data>(m_dataBuffer[m_nextSegmentInOrder]));
+        if(verifyHashChainData(data)){
+          onInOrderVerifiedHashChainData(std::make_shared<Data>(data));
         } else {
           //hashchain error
         }
         onInOrderData(std::make_shared<const Buffer>(m_segmentBuffer[m_nextSegmentInOrder]));
-        m_dataBuffer.erase(m_nextSegmentInOrder);
+        // m_dataBuffer.erase(m_nextSegmentInOrder);
         m_segmentBuffer.erase(m_nextSegmentInOrder);
         m_nextSegmentInOrder++;
       } while (m_segmentBuffer.count(m_nextSegmentInOrder) > 0);
@@ -332,7 +334,8 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
   } else { //BLOCK MODE
     if (m_nextSegmentInOrder == currentSegment) {
       do {
-        verifyHashChainData(m_dataBuffer[m_nextSegmentInOrder]);
+        verifyHashChainData(data);
+        // m_dataBuffer.erase(m_nextSegmentInOrder);
         m_nextSegmentInOrder++;
       } while (m_segmentBuffer.count(m_nextSegmentInOrder) > 0);
     }
@@ -448,87 +451,6 @@ HCSegmentFetcher::afterNackOrTimeout(const Interest& origInterest)
   }
 }
 
-void
-HCSegmentFetcher::verifyHashChain() {
-
-  uint8_t* before_signature = nullptr;
-  int before_segment;
-  int success_count;
-
-  for (auto const& x : m_dataBuffer)
-  {
-    auto data = x.second;
-    //std::cout<<"HCSegmentFetcher::afterHashChainCompleted"<<data.getContent()<<std::endl;
-
-    Name seqNo = data.getName().getSubName(-1);
-
-    if(data.getSignatureInfo().hasNextHash() && (data.getSignatureType() == tlv::SignatureSha256WithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256)) {
-      int segment = data.getName().get(-1).toSegment();
-
-      auto myblock = data.getSignatureInfo().getNextHash().value();
-      uint8_t* signatureNextHash = new uint8_t[32];
-
-      memcpy((void*)signatureNextHash, (void*)&(myblock.wire()[4]),32);
-
-      if (segment != 0) {
-        if (segment - 1 == before_segment) {
-
-          // if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size()+4)) {
-          if(before_signature != nullptr && memcmp((void*)(&data.getSignatureValue().wire()[2]), (void*)before_signature, 32)) {
-          
-            delete[] before_signature;
-            //====labry error
-            signalError(HASHCHAIN_ERROR, "Failure hash key error");
-            //afterSegmentValidated(data);
-          } else {
-            //std::cout<< "4"<< std::endl;
-            delete[] before_signature;
-            //free(signatureBytes);
-            success_count++;
-            //afterSegmentValidated(data);
-          }
-        } else {
-          //This passes segment when a segment comes not in order.
-          //afterSegmentValidated(data);
-        }
-      } else {
-        //This falls for the first segment.
-        success_count++;
-        //afterSegmentValidated(data);
-      }
-
-      int finalBlockId = data.getFinalBlock().value().toSegment();
-      if (segment == finalBlockId) {
-        //free(before_signature);
-        delete[] signatureNextHash;
-        if (success_count < finalBlockId / 2) {
-          std::cout << "Failure hash key error"<<std::endl;
-          std::cout << "success_count:"<<success_count << std::endl;
-          std::cout << "segment:"<<segment << std::endl;
-          std::cout << "finalBlockId:"<<finalBlockId << std::endl;
-          //onError(HASHCHAIN_ERROR, "Failure hash key error");
-        }
-      }
-      //std::cout<< "8"<< std::endl;
-      before_segment = segment;
-      
-      if(signatureNextHash != nullptr) {
-        before_signature = signatureNextHash;
-        //std::cout<< "previousHash: "<< std::endl;
-        //printBlock(data.getSignatureInfo().getNextHash().value());
-      } else {
-        before_signature = nullptr;
-        //std::cout<< "previousHash: nullopt "<< std::endl;
-      }
-      //std::cout<< "9"<< std::endl;
-      //before_signature = std::make_shared<Block>(data.getMetaInfo().getAppMetaInfo().front());
-      } 
-      else {
-        //afterSegmentValidated(data);
-      }
-  }
-}
-
 bool
 HCSegmentFetcher::verifyHashChainData(const Data& data) {
   
@@ -538,6 +460,7 @@ HCSegmentFetcher::verifyHashChainData(const Data& data) {
 
     if(data.getSignatureInfo().hasNextHash() && (data.getSignatureType() == tlv::SignatureHashChainWithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256)) {
         int segment = data.getName().get(-1).toSegment();
+        int before_segment = segment - 1;
 
         auto myblock = data.getSignatureInfo().getNextHash().value();
         
@@ -557,24 +480,25 @@ HCSegmentFetcher::verifyHashChainData(const Data& data) {
             
               delete[] before_signature;
               //====labry error
-              signalError(HASHCHAIN_ERROR, "Failure hash key error");
+              signalError(HASHCHAIN_ERROR, "Failure hash key error: " + std::to_string(segment));
               return false;
               //afterSegmentValidated(data);
             } else {
               //std::cout<< "4"<< std::endl;
               delete[] before_signature;
               //free(signatureBytes);
-              success_count++;
+              // success_count++;
               //afterSegmentValidated(data);
             }
           } else {
+            std::cout<<"not in order"<<std::endl;
             //This passes segment when a segment comes not in order.
             //afterSegmentValidated(data);
           }
         } else {
           //This falls for the first segment.
 
-          success_count++;
+          // success_count++;
           //afterSegmentValidated(data);
         }
         std::cout<<"verifyHashChainData mid: "<<data.getName().get(-1).toSegment()<<std::endl;
@@ -582,13 +506,13 @@ HCSegmentFetcher::verifyHashChainData(const Data& data) {
         if (segment == finalBlockId) {
           //free(before_signature);
           delete[] m_nextHashBuffer[segment];
-          if (success_count < finalBlockId / 2) {
-            std::cout << "Failure hash key error"<<std::endl;
-            std::cout << "success_count:"<<success_count << std::endl;
-            std::cout << "segment:"<<segment << std::endl;
-            std::cout << "finalBlockId:"<<finalBlockId << std::endl;
+          // if (success_count < finalBlockId / 2) {
+          //   std::cout << "Failure hash key error"<<std::endl;
+          //   std::cout << "success_count:"<<success_count << std::endl;
+          //   std::cout << "segment:"<<segment << std::endl;
+          //   std::cout << "finalBlockId:"<<finalBlockId << std::endl;
             //onError(HASHCHAIN_ERROR, "Failure hash key error");
-          }
+          // }
         }
       } 
 

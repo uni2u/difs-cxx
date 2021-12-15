@@ -356,13 +356,13 @@ NDN_CXX_PUBLIC_WITH_TESTS_ELSE_PRIVATE:
   std::map<uint64_t, uint8_t*> m_nextHashBuffer;
 
 private:
-  boost::thread_group workers;
+  // boost::thread_group workers;
   boost::mutex io_mutex;
   //std::map<int, std::shared_ptr<Block>> nextHash_map;
   //std::map<int, std::shared_ptr<Data>> data_map;
-  uint8_t* before_signature = nullptr;
-  int before_segment;
-  int success_count;
+  // uint8_t* before_signature = nullptr;
+  // int before_segment;
+  // int success_count;
   // std::mutex processing_hashchain;
 };
 
