@@ -34,6 +34,7 @@
 
 #include <queue>
 #include <set>
+#include <mutex> 
 
 namespace ndn {
 namespace util {
@@ -299,7 +300,7 @@ public:
   Signal<HCSegmentFetcher> onInOrderComplete;
 
 
-  Signal<HCSegmentFetcher, shared_ptr<std::map<uint64_t, Data>>> onHashChainComplete;
+  Signal<HCSegmentFetcher, ConstBufferPtr> onHashChainComplete;
 
   /**
    * @brief Emitted whenever a received data segment has been successfully validated.
@@ -352,15 +353,17 @@ NDN_CXX_PUBLIC_WITH_TESTS_ELSE_PRIVATE:
   std::map<uint64_t, PendingSegment> m_pendingSegments;
   std::set<uint64_t> m_receivedSegments;
   std::map<uint64_t, Data> m_dataBuffer;
+  std::map<uint64_t, uint8_t*> m_nextHashBuffer;
 
 private:
   boost::thread_group workers;
+  boost::mutex io_mutex;
   //std::map<int, std::shared_ptr<Block>> nextHash_map;
   //std::map<int, std::shared_ptr<Data>> data_map;
   uint8_t* before_signature = nullptr;
   int before_segment;
   int success_count;
-  boost::mutex io_mutex; 
+  // std::mutex processing_hashchain;
 };
 
 } // namespace util

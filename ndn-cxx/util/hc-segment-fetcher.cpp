@@ -258,7 +258,9 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
   if (shouldStop(weakSelf))
     return;
 
-  boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
+  //CRITICAL SECTION
+  // processing_hashchain.lock();
+  // boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
   // We update the last receive time here instead of in the segment received callback so that the
   // transfer will not fail to terminate if we only received invalid Data packets.
   m_timeLastSegmentReceived = time::steady_clock::now();
@@ -267,6 +269,8 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
 
   // It was verified in afterSegmentReceivedCb that the last Data name component is a segment number
   uint64_t currentSegment = data.getName().get(-1).toSegment();
+  
+
   m_receivedSegments.insert(currentSegment);
 
   // Add measurement to RTO estimator (if not retransmission)
@@ -308,17 +312,27 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
     }
   }
 
-  if (m_options.inOrder && m_nextSegmentInOrder == currentSegment) {
-    do {
-      if(verifyHashChainData(m_dataBuffer[m_nextSegmentInOrder])){
-        onInOrderVerifiedHashChainData(std::make_shared<Data>(m_dataBuffer[m_nextSegmentInOrder]));
-      } else {
-        //hashchain error
-      }
-      onInOrderData(std::make_shared<const Buffer>(m_segmentBuffer[m_nextSegmentInOrder]));
-      m_dataBuffer.erase(m_nextSegmentInOrder);
-      m_segmentBuffer.erase(m_nextSegmentInOrder++);
-    } while (m_segmentBuffer.count(m_nextSegmentInOrder) > 0);
+  if(m_options.inOrder) {
+    if (m_nextSegmentInOrder == currentSegment) {
+      do {
+        if(verifyHashChainData(m_dataBuffer[m_nextSegmentInOrder])){
+          onInOrderVerifiedHashChainData(std::make_shared<Data>(m_dataBuffer[m_nextSegmentInOrder]));
+        } else {
+          //hashchain error
+        }
+        onInOrderData(std::make_shared<const Buffer>(m_segmentBuffer[m_nextSegmentInOrder]));
+        m_dataBuffer.erase(m_nextSegmentInOrder);
+        m_segmentBuffer.erase(m_nextSegmentInOrder);
+        m_nextSegmentInOrder++;
+      } while (m_segmentBuffer.count(m_nextSegmentInOrder) > 0);
+    }
+  } else { //BLOCK MODE
+    if (m_nextSegmentInOrder == currentSegment) {
+      do {
+        verifyHashChainData(m_dataBuffer[m_nextSegmentInOrder]);
+        m_nextSegmentInOrder++;
+      } while (m_segmentBuffer.count(m_nextSegmentInOrder) > 0);
+    }
   }
 
   if (m_receivedSegments.size() == 1) {
@@ -341,6 +355,8 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
   }
 
   fetchSegmentsInWindow(origInterest);
+
+  // processing_hashchain.unlock();
 }
 
 void
@@ -512,74 +528,68 @@ HCSegmentFetcher::verifyHashChain() {
 
 bool
 HCSegmentFetcher::verifyHashChainData(const Data& data) {
-      Name seqNo = data.getName().getSubName(-1);
+  
+  //boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
+  //std::cout<<"verifyHashChainData:"<<data.getName().get(-1).toSegment()<<std::endl;
+  Name seqNo = data.getName().getSubName(-1);
 
-    if(data.getSignatureInfo().hasNextHash() && (data.getSignatureType() == tlv::SignatureSha256WithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256)) {
-      int segment = data.getName().get(-1).toSegment();
+    if(data.getSignatureInfo().hasNextHash() && (data.getSignatureType() == tlv::SignatureHashChainWithEcdsa || data.getSignatureType() == tlv::SignatureHashChainWithSha256)) {
+        int segment = data.getName().get(-1).toSegment();
 
-      auto myblock = data.getSignatureInfo().getNextHash().value();
-      uint8_t* signatureNextHash = new uint8_t[32];
+        auto myblock = data.getSignatureInfo().getNextHash().value();
+        
+        uint8_t* before_signature = nullptr;
+        if(segment != 0){
+        uint8_t* before_signature = m_nextHashBuffer[segment-1];
+        }
+        //std::cout<<"1========"<<std::endl;
+        m_nextHashBuffer[segment] = new uint8_t[32];
+        memcpy((void*)m_nextHashBuffer[segment], (void*)&(myblock.wire()[4]),32);
 
-      memcpy((void*)signatureNextHash, (void*)&(myblock.wire()[4]),32);
-
-      if (segment != 0) {
-        if (segment - 1 == before_segment) {
-
-          // if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size()+4)) {
-          if(before_signature != nullptr && memcmp((void*)(&data.getSignatureValue().wire()[2]), (void*)before_signature, 32)) {
-          
-            delete[] before_signature;
-            //====labry error
-            signalError(HASHCHAIN_ERROR, "Failure hash key error");
-            return false;
-            //afterSegmentValidated(data);
+        if (segment != 0) {
+          if (segment - 1 == before_segment) {
+            //std::cout<<"2========"<<std::endl;
+            // if(before_signature != nullptr && memcmp((void*)data.getSignatureValue().value(), (void*)before_signature->value(), data.getSignatureValue().value_size()+4)) {
+            if(before_signature != nullptr && memcmp((void*)(&data.getSignatureValue().wire()[2]), (void*)before_signature, 32)) {
+            
+              delete[] before_signature;
+              //====labry error
+              signalError(HASHCHAIN_ERROR, "Failure hash key error");
+              return false;
+              //afterSegmentValidated(data);
+            } else {
+              //std::cout<< "4"<< std::endl;
+              delete[] before_signature;
+              //free(signatureBytes);
+              success_count++;
+              //afterSegmentValidated(data);
+            }
           } else {
-            //std::cout<< "4"<< std::endl;
-            delete[] before_signature;
-            //free(signatureBytes);
-            success_count++;
+            //This passes segment when a segment comes not in order.
             //afterSegmentValidated(data);
           }
         } else {
-          //This passes segment when a segment comes not in order.
+          //This falls for the first segment.
+
+          success_count++;
           //afterSegmentValidated(data);
         }
-      } else {
-        //This falls for the first segment.
-        success_count++;
-        //afterSegmentValidated(data);
-      }
-
-      int finalBlockId = data.getFinalBlock().value().toSegment();
-      if (segment == finalBlockId) {
-        //free(before_signature);
-        delete[] signatureNextHash;
-        if (success_count < finalBlockId / 2) {
-          std::cout << "Failure hash key error"<<std::endl;
-          std::cout << "success_count:"<<success_count << std::endl;
-          std::cout << "segment:"<<segment << std::endl;
-          std::cout << "finalBlockId:"<<finalBlockId << std::endl;
-          //onError(HASHCHAIN_ERROR, "Failure hash key error");
+        std::cout<<"verifyHashChainData mid: "<<data.getName().get(-1).toSegment()<<std::endl;
+        int finalBlockId = data.getFinalBlock().value().toSegment();
+        if (segment == finalBlockId) {
+          //free(before_signature);
+          delete[] m_nextHashBuffer[segment];
+          if (success_count < finalBlockId / 2) {
+            std::cout << "Failure hash key error"<<std::endl;
+            std::cout << "success_count:"<<success_count << std::endl;
+            std::cout << "segment:"<<segment << std::endl;
+            std::cout << "finalBlockId:"<<finalBlockId << std::endl;
+            //onError(HASHCHAIN_ERROR, "Failure hash key error");
+          }
         }
-      }
-      //std::cout<< "8"<< std::endl;
-      before_segment = segment;
-      
-      if(signatureNextHash != nullptr) {
-        before_signature = signatureNextHash;
-        //std::cout<< "previousHash: "<< std::endl;
-        //printBlock(data.getSignatureInfo().getNextHash().value());
-      } else {
-        before_signature = nullptr;
-        //std::cout<< "previousHash: nullopt "<< std::endl;
-      }
-      //std::cout<< "9"<< std::endl;
-      //before_signature = std::make_shared<Block>(data.getMetaInfo().getAppMetaInfo().front());
       } 
-      else {
-        //afterSegmentValidated(data);
-      }
 
+      //std::cout<<"verifyHashChainData ended: "<<data.getName().get(-1).toSegment()<<std::endl;
       return true;
 }
 
@@ -599,10 +609,8 @@ HCSegmentFetcher::finalizeFetch()
     for (int64_t i = 0; i < m_nSegments; i++) {
       buf.write(m_segmentBuffer[i].get<const char>(), m_segmentBuffer[i].size());
     }
-    //
-    workers.create_thread(boost::bind(&HCSegmentFetcher::verifyHashChain, this));
-    workers.join_all();
-    onHashChainComplete(std::make_shared<std::map<uint64_t, Data>>(m_dataBuffer));
+    // onHashChainComplete(std::make_shared<std::map<uint64_t, Data>>(m_dataBuffer));
+    onHashChainComplete(buf.buf());
     onComplete(buf.buf());
     
   }
@@ -704,6 +712,127 @@ HCSegmentFetcher::getEstimatedRto()
   return std::min(m_options.maxTimeout,
                   time::duration_cast<time::milliseconds>(m_rttEstimator.getEstimatedRto()));
 }
+
+/*
+void
+SegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origInterest,
+                                       std::map<uint64_t, PendingSegment>::iterator pendingSegmentIt,
+                                       const weak_ptr<SegmentFetcher>& weakSelf)
+{
+  if (shouldStop(weakSelf))
+    return;
+
+  // We update the last receive time here instead of in the segment received callback so that the
+  // transfer will not fail to terminate if we only received invalid Data packets.
+  m_timeLastSegmentReceived = time::steady_clock::now();
+
+  m_nReceived++;
+
+  // It was verified in afterSegmentReceivedCb that the last Data name component is a segment number
+  uint64_t currentSegment = data.getName().get(-1).toSegment();
+  m_receivedSegments.insert(currentSegment);
+
+  // Add measurement to RTO estimator (if not retransmission)
+  if (pendingSegmentIt->second.state == SegmentState::FirstInterest) {
+    BOOST_ASSERT(m_nSegmentsInFlight >= 0);
+    m_rttEstimator.addMeasurement(m_timeLastSegmentReceived - pendingSegmentIt->second.sendTime,
+                                  static_cast<size_t>(m_nSegmentsInFlight) + 1);
+  }
+
+  // Remove from pending segments map
+  m_pendingSegments.erase(pendingSegmentIt);
+
+  // Copy data 
+  m_dataBuffer.insert(std::make_pair(currentSegment, data));
+  // std::copy(data.wireEncode().value_begin(), data.wireEncode().value_end(),
+  //         receivedDataIt.first->second.get()->shared_from_this().get());
+
+  // Copy data in segment to temporary buffer
+  auto receivedSegmentIt = m_segmentBuffer.emplace(std::piecewise_construct,
+                                                   std::forward_as_tuple(currentSegment),
+                                                   std::forward_as_tuple(data.getContent().value_size()));
+
+  std::copy(data.getContent().value_begin(), data.getContent().value_end(),
+            receivedSegmentIt.first->second.begin());
+
+  m_nBytesReceived += data.getContent().value_size();
+  afterSegmentValidated(data);
+
+  if (data.getFinalBlock()) {
+    if (!data.getFinalBlock()->isSegment()) {
+      return signalError(FINALBLOCKID_NOT_SEGMENT,
+                         "Received FinalBlockId did not contain a segment component");
+    }
+
+    if (data.getFinalBlock()->toSegment() + 1 != static_cast<uint64_t>(m_nSegments)) {
+      m_nSegments = data.getFinalBlock()->toSegment() + 1;
+      cancelExcessInFlightSegments();
+    }
+  }
+
+  if (m_options.inOrder && m_nextSegmentInOrder == currentSegment) {
+    do {
+      onInOrderData(std::make_shared<const Buffer>(m_segmentBuffer[m_nextSegmentInOrder]));
+      m_dataBuffer.erase(m_nextSegmentInOrder);
+      m_segmentBuffer.erase(m_nextSegmentInOrder++);
+    } while (m_segmentBuffer.count(m_nextSegmentInOrder) > 0);
+  }
+
+  if (m_receivedSegments.size() == 1) {
+    m_versionedDataName = data.getName().getPrefix(-1);
+    if (currentSegment == 0) {
+      // We received the first segment in response, so we can increment the next segment number
+      m_nextSegmentNum++;
+    }
+  }
+
+  if (m_highData < currentSegment) {
+    m_highData = currentSegment;
+  }
+
+  if (data.getCongestionMark() > 0 && !m_options.ignoreCongMarks) {
+    windowDecrease();
+  }
+  else {
+    windowIncrease();
+  }
+
+  fetchSegmentsInWindow(origInterest);
+}
+
+void
+SegmentFetcher::afterValidationFailure(const Data& data,
+                                       const security::v2::ValidationError& error,
+                                       const weak_ptr<SegmentFetcher>& weakSelf)
+{
+  if (shouldStop(weakSelf))
+    return;
+
+  signalError(SEGMENT_VALIDATION_FAIL, "Segment validation failed: " + boost::lexical_cast<std::string>(error));
+}
+
+void
+SegmentFetcher::afterNackReceivedCb(const Interest& origInterest, const lp::Nack& nack,
+                                    const weak_ptr<SegmentFetcher>& weakSelf)
+{
+  if (shouldStop(weakSelf))
+    return;
+
+  afterSegmentNacked();
+
+  BOOST_ASSERT(m_nSegmentsInFlight > 0);
+  m_nSegmentsInFlight--;
+
+  switch (nack.getReason()) {
+    case lp::NackReason::DUPLICATE:
+    case lp::NackReason::CONGESTION:
+      afterNackOrTimeout(origInterest);
+      break;
+    default:
+      signalError(NACK_ERROR, "Nack Error");
+      break;
+  }
+} */
 
 } // namespace util
 } // namespace ndn
