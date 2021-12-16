@@ -173,7 +173,7 @@ HCSegmentFetcher::fetchSegmentsInWindow(const Interest& origInterest)
     Interest interest(origInterest); // to preserve Interest elements
     interest.setName(Name(m_versionedDataName).appendSegment(segment.first));
     interest.setCanBePrefix(false);
-    interest.setMustBeFresh(false);
+    interest.setMustBeFresh(true);
     interest.setInterestLifetime(m_options.interestLifetime);
     interest.refreshNonce();
     sendInterest(segment.first, interest, segment.second);
@@ -303,6 +303,9 @@ HCSegmentFetcher::afterValidationSuccess(const Data& data, const Interest& origI
   //           receivedSegmentIt.first->second.begin());
 
   m_nBytesReceived += data.getContent().value_size();
+  if(!m_options.inOrder){
+    contentBuffer.write(m_segmentBuffer[currentSegment].get<const char>(), m_segmentBuffer[currentSegment].size());
+  }
   afterSegmentValidated(data);
 
   if (data.getFinalBlock()) {
@@ -529,17 +532,14 @@ HCSegmentFetcher::finalizeFetch()
   }
   else {
     // Combine segments into final buffer
-    OBufferStream buf;
+    
     // We may have received more segments than exist in the object.
     BOOST_ASSERT(m_receivedSegments.size() >= static_cast<uint64_t>(m_nSegments));
 
-    for (int64_t i = 0; i < m_nSegments; i++) {
-      buf.write(m_segmentBuffer[i].get<const char>(), m_segmentBuffer[i].size());
-    }
     // onHashChainComplete(std::make_shared<stdstd::cout::map<uint64_t, Data>>(m_dataBuffer));
-    onHashChainComplete(buf.buf());
-    onComplete(buf.buf());
-    
+    onHashChainComplete(contentBuffer.buf());
+    onComplete(contentBuffer.buf());
+    contentBuffer.clear();
   }
   stop();
 }
