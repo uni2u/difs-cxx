@@ -484,14 +484,14 @@ HCSegmentFetcher::verifyHashChainData(const Data& data) {
               return false;
               //afterSegmentValidated(data);
             } else {
-              //std::cout<< "4"<< std::endl;
+              //std::cout<< "segment "<<data.getName().get(-1).toSegment()<<" validated"<< std::endl;
               delete[] before_signature;
               //free(signatureBytes);
               // success_count++;
               //afterSegmentValidated(data);
             }
           } else {
-            std::cout<<"not in order"<<std::endl;
+            //std::cout<<"not in order"<<std::endl;
             //This passes segment when a segment comes not in order.
             //afterSegmentValidated(data);
           }
@@ -501,7 +501,7 @@ HCSegmentFetcher::verifyHashChainData(const Data& data) {
           // success_count++;
           //afterSegmentValidated(data);
         }
-        std::cout<<"verifyHashChainData mid: "<<data.getName().get(-1).toSegment()<<std::endl;
+        //std::cout<<"verifyHashChainData mid: "<<data.getName().get(-1).toSegment()<<std::endl;
         int finalBlockId = data.getFinalBlock().value().toSegment();
         if (segment == finalBlockId) {
           //free(before_signature);
@@ -536,7 +536,7 @@ HCSegmentFetcher::finalizeFetch()
     for (int64_t i = 0; i < m_nSegments; i++) {
       buf.write(m_segmentBuffer[i].get<const char>(), m_segmentBuffer[i].size());
     }
-    // onHashChainComplete(std::make_shared<std::map<uint64_t, Data>>(m_dataBuffer));
+    // onHashChainComplete(std::make_shared<stdstd::cout::map<uint64_t, Data>>(m_dataBuffer));
     onHashChainComplete(buf.buf());
     onComplete(buf.buf());
     
