@@ -54,6 +54,10 @@ public:
 
   std::vector<shared_ptr<Data>>
   makeHashChain(const ndn::Name versionedPrefix, std::istream& is, const Options& options);
+
+  std::vector<shared_ptr<Data>>
+  makeSignedData(const ndn::Name versionedPrefix, std::istream& is, const Options& options);
+
   void
   sign(Data &data, const ndn::Block &nextHash, const SigningInfo& params = SigningInfo());
   void

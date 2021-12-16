@@ -107,6 +107,53 @@ HCKeyChain::makeHashChain(const ndn::Name m_versionedPrefix, std::istream& is, c
 
 }
 
+std::vector<shared_ptr<Data>>
+HCKeyChain::makeSignedData(const ndn::Name m_versionedPrefix, std::istream& is, const Options& options){
+
+  std::vector<shared_ptr<Data>> m_store;
+
+  time::milliseconds freshnessPeriod{10000};
+
+  BOOST_ASSERT(m_store.empty());
+
+
+  std::vector<uint8_t> buffer(options.maxSegmentSize - 32);
+  while (is.good()) {
+    is.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
+    const auto nCharsRead = is.gcount();
+
+    if (nCharsRead > 0) {
+      auto data = make_shared<Data>(Name(m_versionedPrefix).appendSegment(m_store.size()));
+      data->setFreshnessPeriod(freshnessPeriod);
+      data->setContent(buffer.data(), static_cast<size_t>(nCharsRead));
+      m_store.push_back(data);
+    }
+  }
+
+  if (m_store.empty()) {
+    auto data = make_shared<Data>(Name(m_versionedPrefix).appendSegment(0));
+    data->setFreshnessPeriod(freshnessPeriod);
+    m_store.push_back(data);
+  }
+
+  auto finalBlockId = name::Component::fromSegment(m_store.size() - 1);
+
+  Name tmp = Name(options.signingInfo.getSignerName());
+
+  for (auto it = m_store.rbegin(); it != m_store.rend(); it++) {
+    Data& data = **it;
+    data.setFinalBlock(finalBlockId);
+    if (it == m_store.rend() - 1 /* First block */) {
+      sign(data, ndn::signingByIdentity(tmp));
+    } else {
+      sign(data, ndn::signingByIdentity(tmp));
+    }
+  }
+
+  return m_store;
+
+}
+
 void
 HCKeyChain::sign(Data &data, const ndn::Block &nextHash, const SigningInfo &params) {
   NDN_LOG_INFO("HCKeyChain::sign");
